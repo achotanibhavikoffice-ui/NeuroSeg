@@ -12,6 +12,7 @@ import { AppLayout } from './layouts/AppLayout';
 import { AblationLabPage } from './pages/AblationLabPage';
 import { CohortPage } from './pages/CohortPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { HematologyLabPage } from './pages/HematologyLabPage';
 import { LongitudinalPage } from './pages/LongitudinalPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { UncertaintyLabPage } from './pages/UncertaintyLabPage';
@@ -70,6 +71,10 @@ export default function App() {
               onSliceChange={setCurrentSlice}
             />
           }
+        />
+        <Route
+          path="/hematology"
+          element={<HematologyLabPage activePatient={activePatient} />}
         />
         <Route
           path="/uncertainty"

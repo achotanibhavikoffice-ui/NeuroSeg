@@ -26,6 +26,13 @@ from pydantic import BaseModel
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from backend.hematology import (
+    BIOMARKER_METADATA,
+    CLINICAL_PRESET_SCENARIOS,
+    PATIENT_DEFAULT_PANELS,
+    analyze_blood_and_mri_fusion,
+    parse_blood_report_text,
+)
 from backend.report_generator import RadiologyReportGenerator
 from backend.volumetry import VolumetricTumorQuantifier
 from src.dataset import SyntheticBrainMRIDataset
@@ -402,22 +409,78 @@ def get_longitudinal_tracking(patient_id: str = "TCGA-CS-4941"):
     }
 
 
+class HematologyAnalyzeRequest(BaseModel):
+    patient_id: str = "TCGA-CS-4941"
+    panel: Dict[str, float]
+
+
+class HematologyParseRequest(BaseModel):
+    patient_id: str = "TCGA-CS-4941"
+    raw_text: str
+
+
+@app.get("/api/hematology/{patient_id}")
+def get_patient_hematology(patient_id: str = "TCGA-CS-4941"):
+    """Returns baseline peripheral blood panel, metadata, presets, and Cross-Modal MRI+Blood fusion analysis."""
+    patient = next((p for p in COHORT_PATIENTS if p["patient_id"] == patient_id), COHORT_PATIENTS[0])
+    default_panel = PATIENT_DEFAULT_PANELS.get(patient["patient_id"], PATIENT_DEFAULT_PANELS["TCGA-CS-4941"])
+    analysis = analyze_blood_and_mri_fusion(patient, default_panel)
+    return {
+        "status": "success",
+        "patient": patient,
+        "biomarker_metadata": BIOMARKER_METADATA,
+        "presets": CLINICAL_PRESET_SCENARIOS,
+        "analysis": analysis,
+    }
+
+
+@app.post("/api/hematology/analyze")
+def post_analyze_hematology(req: HematologyAnalyzeRequest):
+    """Computes live Cross-Modal Gated MRI + Blood Biomarker fusion for custom biomarker sliders."""
+    patient = next((p for p in COHORT_PATIENTS if p["patient_id"] == req.patient_id), COHORT_PATIENTS[0])
+    analysis = analyze_blood_and_mri_fusion(patient, req.panel)
+    return {
+        "status": "success",
+        "analysis": analysis,
+    }
+
+
+@app.post("/api/hematology/parse-report")
+def post_parse_blood_report(req: HematologyParseRequest):
+    """Parses uploaded/pasted clinical blood report text and runs Cross-Modal MRI+Blood fusion."""
+    patient = next((p for p in COHORT_PATIENTS if p["patient_id"] == req.patient_id), COHORT_PATIENTS[0])
+    extracted_panel = parse_blood_report_text(req.raw_text, fallback_patient_id=patient["patient_id"])
+    analysis = analyze_blood_and_mri_fusion(patient, extracted_panel)
+    return {
+        "status": "success",
+        "extracted_panel": extracted_panel,
+        "analysis": analysis,
+    }
+
+
 class ReportRequest(BaseModel):
     patient_id: str = "TCGA-CS-4941"
     patient_age: int = 47
     patient_gender: str = "Male"
     indication: str = "New-onset focal neurological deficit with severe headaches and focal seizures."
     volumetry: Dict[str, Any]
+    hematology: Optional[Dict[str, Any]] = None
 
 
 @app.post("/api/generate-report")
 def generate_report(req: ReportRequest):
+    patient = next((p for p in COHORT_PATIENTS if p["patient_id"] == req.patient_id), COHORT_PATIENTS[0])
+    hema_data = req.hematology
+    if hema_data is None:
+        default_panel = PATIENT_DEFAULT_PANELS.get(patient["patient_id"], PATIENT_DEFAULT_PANELS["TCGA-CS-4941"])
+        hema_data = analyze_blood_and_mri_fusion(patient, default_panel)
     return REPORT_GEN.generate_report(
         patient_id=req.patient_id,
         patient_age=req.patient_age,
         patient_gender=req.patient_gender,
         indication=req.indication,
         volumetry_data=req.volumetry,
+        hematology_data=hema_data,
     )
 
 
