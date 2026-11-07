@@ -212,11 +212,15 @@ export function DashboardPage({
               <small>Voxel Resolution: 0.94 × 0.94 × 4.0 mm</small>
             </div>
 
-            {/* Interactive Bar + Area Curve across the 16 Axial Slices */}
-            <div className="mt-4 grid grid-cols-16 items-end gap-1.5 h-36 pt-4 px-2 border-b border-slate-200 dark:border-[#2b3a45]">
+            {/* Interactive 16-Bar Horizontal Chart across the 16 Axial Slices */}
+            <div
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
+              className="mt-4 items-end gap-2 h-44 pt-4 pb-2 px-3 border-b border-slate-200 dark:border-[#293c4f]"
+            >
               {breakdown.map((s, idx) => {
-                const heightPct = Math.max(8, Math.round((s.area_mm2 / maxArea) * 100));
+                const barHeightPx = Math.max(8, Math.round((s.area_mm2 / maxArea) * 116));
                 const hasTumor = s.pixel_count > 0;
+                const isPeak = idx + 1 === study?.volumetry.peak_lesion_slice_index;
                 return (
                   <button
                     key={s.slice_index}
@@ -226,19 +230,18 @@ export function DashboardPage({
                       navigate('/workstation');
                     }}
                     title={`Slice #${s.slice_index}: ${s.area_mm2} mm² (Max Dia: ${s.max_diameter_mm} mm)`}
-                    className="group flex flex-col items-center justify-end h-full flex-1 focus:outline-none"
+                    className="group flex flex-col items-center justify-end h-full w-full focus:outline-none"
                   >
-                    <div
-                      style={{ height: `${heightPct}%` }}
-                      className={`w-full rounded-t transition-all group-hover:opacity-90 ${
-                        hasTumor
-                          ? idx + 1 === study?.volumetry.peak_lesion_slice_index
-                            ? 'bg-amber-500 shadow-lg shadow-amber-500/30'
-                            : 'bg-[#087f72] dark:bg-[#5bd0a8]'
-                          : 'bg-slate-200 dark:bg-[#2b3a45]'
-                      }`}
-                    />
-                    <span className="mt-1.5 font-mono text-[10px] text-slate-400 group-hover:font-bold group-hover:text-[#087f72] dark:group-hover:text-[#5bd0a8]">
+                    <div className="flex items-end justify-center w-full flex-1">
+                      <div
+                        style={{
+                          height: `${barHeightPx}px`,
+                          backgroundColor: hasTumor ? (isPeak ? '#f59e0b' : '#087f72') : '#cbd5e1',
+                        }}
+                        className="w-full max-w-[26px] rounded-t-md transition-all group-hover:opacity-85"
+                      />
+                    </div>
+                    <span className="mt-2 font-mono text-[10.5px] font-semibold text-slate-500 group-hover:font-bold group-hover:text-[#087f72] dark:text-slate-300 dark:group-hover:text-[#5bd0a8]">
                       S{s.slice_index}
                     </span>
                   </button>
