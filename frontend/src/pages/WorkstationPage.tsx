@@ -113,9 +113,9 @@ export function WorkstationPage({
       </div>
 
       {/* 3-Column PACS Workstation Grid */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* LEFT COLUMN (3 cols): Layer Toggles & Windowing */}
-        <div className="panel p-4 lg:col-span-3 flex flex-col gap-4">
+        <div className="panel p-6 lg:col-span-3 flex flex-col gap-5">
           <div>
             <span className="section-kicker">MULTI-MODAL OVERLAY ENGINE</span>
             <h2 className="text-sm font-bold">Diagnostic Layer Stack (6 Layers)</h2>
@@ -275,9 +275,9 @@ export function WorkstationPage({
         </div>
 
         {/* CENTER COLUMN (6 cols): Interactive Multi-Layer Canvas Viewport */}
-        <div className="panel p-4 lg:col-span-6 flex flex-col gap-3">
+        <div className="panel p-6 lg:col-span-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <Eye size={16} className="text-[#087f72]" />
               <span className="font-bold text-sm">
                 Axial Plane #{currentSlice + 1} / {slices.length || 16}
@@ -290,7 +290,7 @@ export function WorkstationPage({
                 <span className="change-pill change-up">PARENCHYMA CLEAR</span>
               )}
             </div>
-            <div className="font-mono text-xs text-slate-400">
+            <div className="font-mono text-xs text-slate-500 dark:text-slate-300">
               Z-Coord: {((currentSlice - 8) * 4.0).toFixed(1)} mm • HD95: {activeSliceData?.hd95_mm || 0} mm
             </div>
           </div>
@@ -310,7 +310,7 @@ export function WorkstationPage({
               const y = Math.round(((e.clientY - rect.top) / rect.height) * 256);
               setCursorCoords({ x: Math.max(0, Math.min(255, x)), y: Math.max(0, Math.min(255, y)) });
             }}
-            className="relative mx-auto aspect-square w-full max-w-[440px] overflow-hidden rounded-xl border border-slate-800 bg-[#05080d] shadow-inner cursor-crosshair select-none"
+            className="relative mx-auto aspect-square w-full max-w-[450px] overflow-hidden rounded-xl border border-slate-800 bg-[#05080d] shadow-inner cursor-crosshair select-none"
           >
             {activeSliceData && (
               <>
@@ -374,22 +374,31 @@ export function WorkstationPage({
               </>
             )}
 
-            {/* Corner PACS DICOM HUD Overlays */}
-            <div className="pointer-events-none absolute left-3 top-3 font-mono text-[11px] leading-relaxed text-emerald-400/90">
-              <div>{activePatient.patient_id} ({activePatient.sex}, {activePatient.age}Y)</div>
-              <div>SEQ: 3D-FLAIR + BI-HEMISPHERIC ATTN</div>
-              <div>FOV: 240mm • Matrix: 256×256</div>
+            {/* Corner PACS DICOM HUD Overlays (Forced High-Contrast Light Text over Black MRI) */}
+            <div
+              style={{ color: '#6ee7b7' }}
+              className="pointer-events-none absolute left-3.5 top-3.5 font-mono text-[11px] font-semibold leading-relaxed drop-shadow"
+            >
+              <div style={{ color: '#6ee7b7' }}>{activePatient.patient_id} ({activePatient.sex}, {activePatient.age}Y)</div>
+              <div style={{ color: '#a7f3d0' }}>SEQ: 3D-FLAIR + BI-HEMISPHERIC ATTN</div>
+              <div style={{ color: '#cbd5e1' }}>FOV: 240mm • Matrix: 256×256</div>
             </div>
 
-            <div className="pointer-events-none absolute right-3 top-3 text-right font-mono text-[11px] leading-relaxed text-cyan-300/90">
-              <div>SLICE #{currentSlice + 1} / {slices.length || 16}</div>
-              <div>CONF: {((activeSliceData?.confidence || 0.94) * 100).toFixed(1)}%</div>
-              <div className="text-amber-400">H(p): {activeSliceData?.epistemic_entropy || 0.012} bits</div>
+            <div
+              style={{ color: '#67e8f9' }}
+              className="pointer-events-none absolute right-3.5 top-3.5 text-right font-mono text-[11px] font-semibold leading-relaxed drop-shadow"
+            >
+              <div style={{ color: '#67e8f9' }}>SLICE #{currentSlice + 1} / {slices.length || 16}</div>
+              <div style={{ color: '#e2e8f0' }}>CONF: {((activeSliceData?.confidence || 0.94) * 100).toFixed(1)}%</div>
+              <div style={{ color: '#fbbf24' }}>H(p): {activeSliceData?.epistemic_entropy || 0.012} bits</div>
             </div>
 
-            <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 font-mono text-[11px] text-slate-300">
-              <Crosshair size={13} className="text-[#5bd0a8]" />
-              <span>
+            <div
+              style={{ color: '#f1f5f9' }}
+              className="pointer-events-none absolute bottom-3.5 left-3.5 flex items-center gap-2 font-mono text-[11px] font-semibold drop-shadow"
+            >
+              <Crosshair size={13} color="#5bd0a8" />
+              <span style={{ color: '#f1f5f9' }}>
                 Voxel ({cursorCoords.x}, {cursorCoords.y}, {currentSlice + 1}) • Stereotactic ({((cursorCoords.x - 128) * 0.94).toFixed(1)}mm, {((cursorCoords.y - 128) * 0.94).toFixed(1)}mm)
               </span>
             </div>
@@ -397,7 +406,7 @@ export function WorkstationPage({
 
           {/* Axial Slice Scroller Slider */}
           <div className="px-2 pt-1">
-            <div className="flex justify-between text-xs text-slate-400 mb-1">
+            <div className="flex justify-between text-xs text-slate-500 dark:text-slate-300 mb-1.5">
               <span>Superior (Cranial Vertex)</span>
               <strong className="font-mono text-[#087f72] dark:text-[#5bd0a8]">
                 Scroll Wheel or Drag Axial Plane ({currentSlice + 1} / {slices.length || 16})
@@ -416,7 +425,7 @@ export function WorkstationPage({
         </div>
 
         {/* RIGHT COLUMN (3 cols): Slice Telemetry & Multi-Slice Filmstrip */}
-        <div className="panel p-4 lg:col-span-3 flex flex-col gap-4">
+        <div className="panel p-6 lg:col-span-3 flex flex-col gap-5">
           <div>
             <span className="section-kicker">QUANTITATIVE SLICE TELEMETRY</span>
             <h2 className="text-sm font-bold">Plane #{currentSlice + 1} Biomarkers</h2>
