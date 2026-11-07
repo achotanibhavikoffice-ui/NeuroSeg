@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy, Download, FileText, Printer, Sparkles } from 'lucide-react';
-import { neuroApi, type PatientRecord, type StudyStackResponse } from '../api';
+import {
+  PATIENT_DEFAULT_BLOOD_PANELS,
+  computeClientHematologyAnalysis,
+  neuroApi,
+  type PatientRecord,
+  type StudyStackResponse,
+} from '../api';
 
 interface ReportsPageProps {
   activePatient: PatientRecord;
@@ -15,12 +21,17 @@ export function ReportsPage({ activePatient, study }: ReportsPageProps) {
   const [source, setSource] = useState('NeuroSeg v3.0 ACR/RSNA Autonomous Synthesis Engine');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const hema = computeClientHematologyAnalysis(
+    activePatient,
+    PATIENT_DEFAULT_BLOOD_PANELS[activePatient.patient_id] ||
+      PATIENT_DEFAULT_BLOOD_PANELS['TCGA-CS-4941']
+  );
 
   const runSynthesis = async () => {
     if (!study) return;
     setLoading(true);
     try {
-      const res = await neuroApi.generateReport(activePatient, study.volumetry, indication);
+      const res = await neuroApi.generateReport(activePatient, study.volumetry, indication, hema);
       setReportText(res.report_markdown);
       setSource(res.source);
     } finally {
@@ -111,12 +122,14 @@ export function ReportsPage({ activePatient, study }: ReportsPageProps) {
             </div>
 
             <div className="rounded-md bg-slate-50 p-3 space-y-1.5 font-mono text-[11px] dark:bg-[#1d2b36]">
-              <div className="font-bold text-[#087f72] dark:text-[#5bd0a8]">Injected Telemetry Payload:</div>
-              <div>• 3D Volume: {activePatient.volume_cm3} cm³</div>
-              <div>• RECIST 1.1: {activePatient.recist_mm} mm</div>
-              <div>• Surface HD95: {activePatient.hd95_mm} mm</div>
-              <div>• Calibration ECE: {activePatient.ece}</div>
+              <div className="font-bold text-[#087f72] dark:text-[#5bd0a8]">Injected Multimodal MRI + Blood Payload:</div>
+              <div>• 3D Volume: {activePatient.volume_cm3} cm³ (RECIST: {activePatient.recist_mm} mm)</div>
+              <div>• Surface HD95: {activePatient.hd95_mm} mm | ECE: {activePatient.ece}</div>
               <div>• IDH1 / 1p19q: {activePatient.biomarkers.idh1} / {activePatient.biomarkers.codel_1p19q}</div>
+              <div>• Blood NLR / SII: {hema.indices.nlr} / {hema.indices.sii}</div>
+              <div>• Liquid Biopsy sGFAP: {hema.panel.serum_gfap_pg_ml} pg/mL</div>
+              <div>• Craniotomy Gate: {hema.surgical_clearance.status}</div>
+              <div>• TMZ Status: {hema.chemo_safety.ctcae_grade}</div>
             </div>
 
             <button

@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   Brain,
   CheckCircle2,
+  Droplets,
   FileText,
   FlaskConical,
   Layers,
@@ -11,7 +12,13 @@ import {
   Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import type { AblationModelRow, PatientRecord, StudyStackResponse } from '../api';
+import {
+  PATIENT_DEFAULT_BLOOD_PANELS,
+  computeClientHematologyAnalysis,
+  type AblationModelRow,
+  type PatientRecord,
+  type StudyStackResponse,
+} from '../api';
 
 interface DashboardPageProps {
   patients: PatientRecord[];
@@ -33,6 +40,11 @@ export function DashboardPage({
   const navigate = useNavigate();
   const breakdown = study?.volumetry.slice_breakdown || [];
   const maxArea = Math.max(1, ...breakdown.map((b) => b.area_mm2));
+  const hemaSummary = computeClientHematologyAnalysis(
+    activePatient,
+    PATIENT_DEFAULT_BLOOD_PANELS[activePatient.patient_id] ||
+      PATIENT_DEFAULT_BLOOD_PANELS['TCGA-CS-4941']
+  );
 
   return (
     <div>
@@ -57,6 +69,14 @@ export function DashboardPage({
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            className="button button-dark"
+            onClick={() => navigate('/hematology')}
+          >
+            <Droplets size={15} />
+            <span>Blood + MRI Fusion</span>
+          </button>
           <button
             type="button"
             className="button button-dark"
@@ -377,19 +397,41 @@ export function DashboardPage({
                 <strong className="font-mono">{activePatient.biomarkers.mgmt}</strong>
               </div>
               <div className="flex justify-between border-b border-slate-100 pb-2 dark:border-[#2b3a45]">
+                <span className="text-slate-400">Blood NLR / Serum GFAP</span>
+                <strong className="font-mono text-[#087f72] dark:text-[#5bd0a8]">
+                  NLR {hemaSummary.indices.nlr} • {hemaSummary.panel.serum_gfap_pg_ml} pg/mL
+                </strong>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-2 dark:border-[#2b3a45]">
+                <span className="text-slate-400">Pre-Craniotomy Blood Gate</span>
+                <strong className="font-mono text-[#087f72] dark:text-[#5bd0a8]">
+                  {hemaSummary.surgical_clearance.status}
+                </strong>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-2 dark:border-[#2b3a45]">
                 <span className="text-slate-400">Uncertainty Halo (Mean H)</span>
                 <strong className="font-mono text-amber-500">0.118 bits (Calibrated)</strong>
               </div>
             </div>
 
-            <button
-              type="button"
-              className="button trade-submit trade-buy mt-4"
-              onClick={() => navigate('/workstation')}
-            >
-              <Layers size={15} />
-              <span>Inspect 6-Layer PACS Stack</span>
-            </button>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                type="button"
+                className="button trade-submit trade-buy"
+                onClick={() => navigate('/workstation')}
+              >
+                <Layers size={15} />
+                <span>Inspect 6-Layer PACS Stack</span>
+              </button>
+              <button
+                type="button"
+                className="button button-dark w-full justify-center"
+                onClick={() => navigate('/hematology')}
+              >
+                <Droplets size={15} />
+                <span>Open Neuro-Hematology Blood Lab</span>
+              </button>
+            </div>
           </div>
 
           {/* 5 Research Upgrades Benchmark Summary */}

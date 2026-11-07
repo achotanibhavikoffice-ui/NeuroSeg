@@ -104,6 +104,574 @@ export interface LongitudinalResponse {
   timepoints: LongitudinalTimepoint[];
 }
 
+export interface BloodPanelValues {
+  hemoglobin_g_dl: number;
+  wbc_10e3_ul: number;
+  neutrophils_anc_10e3_ul: number;
+  lymphocytes_alc_10e3_ul: number;
+  platelets_10e3_ul: number;
+  inr: number;
+  d_dimer_ng_ml: number;
+  sodium_meq_l: number;
+  glucose_mg_dl: number;
+  crp_mg_l: number;
+  ldh_u_l: number;
+  serum_gfap_pg_ml: number;
+}
+
+export interface BiomarkerMeta {
+  key: keyof BloodPanelValues;
+  label: string;
+  unit: string;
+  ref_min: number;
+  ref_max: number;
+  min: number;
+  max: number;
+  step: number;
+  category: string;
+  clinical_role: string;
+}
+
+export interface DifferentialItem {
+  condition: string;
+  probability: number;
+  key_drivers: string;
+  color: string;
+}
+
+export interface AttributionItem {
+  feature: string;
+  modality: string;
+  weight: number;
+  value_display: string;
+}
+
+export interface HematologyAnalysis {
+  patient_id: string;
+  panel: BloodPanelValues;
+  indices: {
+    nlr: number;
+    sii: number;
+    nlr_tier: string;
+    nlr_status: 'optimal' | 'warning' | 'critical';
+    bbb_disruption_index: number;
+  };
+  chemo_safety: {
+    ctcae_grade: string;
+    tmz_action: string;
+    tmz_dose_pct: number;
+    status: 'optimal' | 'warning' | 'critical';
+  };
+  surgical_clearance: {
+    status: string;
+    tier: 'optimal' | 'warning' | 'critical';
+    summary: string;
+    flags: string[];
+  };
+  multimodal_fusion: {
+    high_grade_probability: number;
+    low_grade_probability: number;
+    predicted_grade: string;
+    mri_modality_gate: number;
+    blood_modality_gate: number;
+    differential_diagnosis: DifferentialItem[];
+    attributions: AttributionItem[];
+  };
+}
+
+export interface ClinicalPresetScenario {
+  id: string;
+  name: string;
+  description: string;
+  values: BloodPanelValues;
+}
+
+export const BIOMARKER_METADATA_LIST: BiomarkerMeta[] = [
+  {
+    key: 'hemoglobin_g_dl',
+    label: 'Hemoglobin (Hb)',
+    unit: 'g/dL',
+    ref_min: 12.5,
+    ref_max: 17.0,
+    min: 6.0,
+    max: 19.0,
+    step: 0.1,
+    category: 'Complete Blood Count',
+    clinical_role: 'Cerebral oxygen delivery & tumour hypoxia index',
+  },
+  {
+    key: 'wbc_10e3_ul',
+    label: 'Total WBC Count',
+    unit: '×10³/µL',
+    ref_min: 4.0,
+    ref_max: 10.5,
+    min: 1.0,
+    max: 28.0,
+    step: 0.1,
+    category: 'Complete Blood Count',
+    clinical_role: 'Elevated in cerebral abscess or dexamethasone therapy',
+  },
+  {
+    key: 'neutrophils_anc_10e3_ul',
+    label: 'Neutrophils (ANC)',
+    unit: '×10³/µL',
+    ref_min: 1.8,
+    ref_max: 7.0,
+    min: 0.3,
+    max: 22.0,
+    step: 0.1,
+    category: 'Leukocyte Differential',
+    clinical_role: 'Myeloid pro-tumoral inflammation & TMZ neutropenia gate',
+  },
+  {
+    key: 'lymphocytes_alc_10e3_ul',
+    label: 'Lymphocytes (ALC)',
+    unit: '×10³/µL',
+    ref_min: 1.0,
+    ref_max: 3.5,
+    min: 0.2,
+    max: 5.0,
+    step: 0.05,
+    category: 'Leukocyte Differential',
+    clinical_role: 'Anti-glioma T-cell immunity & radiation lymphopenia marker',
+  },
+  {
+    key: 'platelets_10e3_ul',
+    label: 'Platelet Count',
+    unit: '×10³/µL',
+    ref_min: 150.0,
+    ref_max: 400.0,
+    min: 25.0,
+    max: 600.0,
+    step: 5.0,
+    category: 'Hemostasis & Coagulation',
+    clinical_role: 'Craniotomy threshold ≥100k; primary TMZ dose-limiting toxicity',
+  },
+  {
+    key: 'inr',
+    label: 'Prothrombin INR',
+    unit: 'ratio',
+    ref_min: 0.85,
+    ref_max: 1.15,
+    min: 0.8,
+    max: 3.5,
+    step: 0.05,
+    category: 'Hemostasis & Coagulation',
+    clinical_role: 'Must be ≤1.25 prior to stereotactic biopsy or craniotomy',
+  },
+  {
+    key: 'd_dimer_ng_ml',
+    label: 'D-Dimer (FEU)',
+    unit: 'ng/mL',
+    ref_min: 50.0,
+    ref_max: 500.0,
+    min: 50.0,
+    max: 3500.0,
+    step: 25.0,
+    category: 'Hemostasis & Coagulation',
+    clinical_role: 'Tissue-factor glioma hypercoagulability & DVT/PE screening',
+  },
+  {
+    key: 'sodium_meq_l',
+    label: 'Serum Sodium (Na⁺)',
+    unit: 'mEq/L',
+    ref_min: 135.0,
+    ref_max: 145.0,
+    min: 120.0,
+    max: 155.0,
+    step: 1.0,
+    category: 'Neuro-Metabolic Panel',
+    clinical_role: 'Detects SIADH & cerebral salt wasting; hyponatremia worsens edema',
+  },
+  {
+    key: 'glucose_mg_dl',
+    label: 'Fasting Glucose',
+    unit: 'mg/dL',
+    ref_min: 70.0,
+    ref_max: 110.0,
+    min: 60.0,
+    max: 320.0,
+    step: 2.0,
+    category: 'Neuro-Metabolic Panel',
+    clinical_role: 'Monitors dexamethasone-induced steroid hyperglycemia',
+  },
+  {
+    key: 'crp_mg_l',
+    label: 'High-Sensitivity CRP',
+    unit: 'mg/L',
+    ref_min: 0.2,
+    ref_max: 5.0,
+    min: 0.1,
+    max: 120.0,
+    step: 0.5,
+    category: 'Inflammatory & Liquid Biopsy',
+    clinical_role: 'Markedly elevated (>25 mg/L) in cerebral abscess vs glioma',
+  },
+  {
+    key: 'ldh_u_l',
+    label: 'Serum LDH',
+    unit: 'U/L',
+    ref_min: 120.0,
+    ref_max: 240.0,
+    min: 90.0,
+    max: 900.0,
+    step: 5.0,
+    category: 'Inflammatory & Liquid Biopsy',
+    clinical_role: 'Elevated in Primary CNS Lymphoma (PCNSL) & high-grade necrosis',
+  },
+  {
+    key: 'serum_gfap_pg_ml',
+    label: 'Serum GFAP (Astroglial)',
+    unit: 'pg/mL',
+    ref_min: 20.0,
+    ref_max: 110.0,
+    min: 10.0,
+    max: 1200.0,
+    step: 10.0,
+    category: 'Inflammatory & Liquid Biopsy',
+    clinical_role: 'Astrocyte intermediate filament leaked across disrupted BBB',
+  },
+];
+
+export const PATIENT_DEFAULT_BLOOD_PANELS: Record<string, BloodPanelValues> = {
+  'TCGA-CS-4941': {
+    hemoglobin_g_dl: 14.2,
+    wbc_10e3_ul: 7.4,
+    neutrophils_anc_10e3_ul: 4.6,
+    lymphocytes_alc_10e3_ul: 1.85,
+    platelets_10e3_ul: 235.0,
+    inr: 1.04,
+    d_dimer_ng_ml: 380.0,
+    sodium_meq_l: 138.0,
+    glucose_mg_dl: 104.0,
+    crp_mg_l: 2.8,
+    ldh_u_l: 188.0,
+    serum_gfap_pg_ml: 165.0,
+  },
+  'TCGA-DU-5872': {
+    hemoglobin_g_dl: 13.4,
+    wbc_10e3_ul: 6.2,
+    neutrophils_anc_10e3_ul: 3.5,
+    lymphocytes_alc_10e3_ul: 1.95,
+    platelets_10e3_ul: 260.0,
+    inr: 0.98,
+    d_dimer_ng_ml: 290.0,
+    sodium_meq_l: 140.0,
+    glucose_mg_dl: 92.0,
+    crp_mg_l: 1.6,
+    ldh_u_l: 162.0,
+    serum_gfap_pg_ml: 118.0,
+  },
+  'TCGA-FG-6689': {
+    hemoglobin_g_dl: 11.8,
+    wbc_10e3_ul: 11.6,
+    neutrophils_anc_10e3_ul: 8.9,
+    lymphocytes_alc_10e3_ul: 1.1,
+    platelets_10e3_ul: 142.0,
+    inr: 1.18,
+    d_dimer_ng_ml: 940.0,
+    sodium_meq_l: 133.0,
+    glucose_mg_dl: 158.0,
+    crp_mg_l: 8.4,
+    ldh_u_l: 310.0,
+    serum_gfap_pg_ml: 480.0,
+  },
+  'TCGA-HT-7684': {
+    hemoglobin_g_dl: 13.8,
+    wbc_10e3_ul: 5.8,
+    neutrophils_anc_10e3_ul: 3.1,
+    lymphocytes_alc_10e3_ul: 2.1,
+    platelets_10e3_ul: 295.0,
+    inr: 0.96,
+    d_dimer_ng_ml: 210.0,
+    sodium_meq_l: 141.0,
+    glucose_mg_dl: 88.0,
+    crp_mg_l: 1.1,
+    ldh_u_l: 148.0,
+    serum_gfap_pg_ml: 85.0,
+  },
+};
+
+export const CLINICAL_PRESET_SCENARIOS: ClinicalPresetScenario[] = [
+  {
+    id: 'baseline_glioma',
+    name: 'Baseline WHO Grade 2 Glioma (Surgical Candidate)',
+    description:
+      'Balanced hematologic profile with mildly elevated Serum GFAP (165 pg/mL) and low NLR (2.49); cleared for craniotomy.',
+    values: PATIENT_DEFAULT_BLOOD_PANELS['TCGA-CS-4941'],
+  },
+  {
+    id: 'tmz_myelosuppression',
+    name: 'Adjuvant TMZ Cycle 3 — Grade 3 Thrombocytopenia',
+    description:
+      'Platelets dropped to 42 ×10³/µL and ANC to 0.9 ×10³/µL following Temozolomide alkylating therapy; requires immediate chemo hold.',
+    values: {
+      hemoglobin_g_dl: 10.4,
+      wbc_10e3_ul: 2.3,
+      neutrophils_anc_10e3_ul: 0.9,
+      lymphocytes_alc_10e3_ul: 0.65,
+      platelets_10e3_ul: 42.0,
+      inr: 1.14,
+      d_dimer_ng_ml: 520.0,
+      sodium_meq_l: 136.0,
+      glucose_mg_dl: 112.0,
+      crp_mg_l: 4.2,
+      ldh_u_l: 215.0,
+      serum_gfap_pg_ml: 140.0,
+    },
+  },
+  {
+    id: 'abscess_mimic',
+    name: 'Pyogenic Cerebral Abscess Mimic (Acute Leukocytosis)',
+    description:
+      'High hs-CRP (68 mg/L), leukocytosis (WBC 18.4 ×10³/µL, ANC 15.2 ×10³/µL), and low GFAP shift Bayesian posterior toward infectious abscess.',
+    values: {
+      hemoglobin_g_dl: 12.9,
+      wbc_10e3_ul: 18.4,
+      neutrophils_anc_10e3_ul: 15.2,
+      lymphocytes_alc_10e3_ul: 1.6,
+      platelets_10e3_ul: 385.0,
+      inr: 1.12,
+      d_dimer_ng_ml: 780.0,
+      sodium_meq_l: 134.0,
+      glucose_mg_dl: 118.0,
+      crp_mg_l: 68.0,
+      ldh_u_l: 230.0,
+      serum_gfap_pg_ml: 62.0,
+    },
+  },
+  {
+    id: 'anaplastic_transformation',
+    name: 'High-Grade Transformation + Steroid Hyperglycemia',
+    description:
+      'Markedly elevated Serum GFAP (640 pg/mL), high NLR (9.20), D-Dimer hypercoagulability (1,420 ng/mL), and SIADH hyponatremia (129 mEq/L).',
+    values: {
+      hemoglobin_g_dl: 11.5,
+      wbc_10e3_ul: 13.8,
+      neutrophils_anc_10e3_ul: 11.5,
+      lymphocytes_alc_10e3_ul: 1.25,
+      platelets_10e3_ul: 165.0,
+      inr: 1.32,
+      d_dimer_ng_ml: 1420.0,
+      sodium_meq_l: 129.0,
+      glucose_mg_dl: 214.0,
+      crp_mg_l: 11.5,
+      ldh_u_l: 420.0,
+      serum_gfap_pg_ml: 640.0,
+    },
+  },
+];
+
+export function computeClientHematologyAnalysis(
+  patient: PatientRecord,
+  panel: BloodPanelValues
+): HematologyAnalysis {
+  const hb = panel.hemoglobin_g_dl;
+  const wbc = panel.wbc_10e3_ul;
+  const anc = panel.neutrophils_anc_10e3_ul;
+  const alc = Math.max(0.1, panel.lymphocytes_alc_10e3_ul);
+  const plt = panel.platelets_10e3_ul;
+  const inr = panel.inr;
+  const dDimer = panel.d_dimer_ng_ml;
+  const sodium = panel.sodium_meq_l;
+  const crp = panel.crp_mg_l;
+  const ldh = panel.ldh_u_l;
+  const gfap = panel.serum_gfap_pg_ml;
+
+  const nlr = +(anc / alc).toFixed(2);
+  const sii = +((plt * anc) / alc).toFixed(1);
+
+  let nlrTier = 'Favorable Immune Profile (NLR < 3.0)';
+  let nlrStatus: 'optimal' | 'warning' | 'critical' = 'optimal';
+  if (nlr > 4.5) {
+    nlrTier = 'High Myeloid Immunosuppression (NLR > 4.5)';
+    nlrStatus = 'critical';
+  } else if (nlr >= 3.0) {
+    nlrTier = 'Borderline Neuro-Inflammation (NLR 3.0–4.5)';
+    nlrStatus = 'warning';
+  }
+
+  let ctcaeGrade = 'CTCAE Grade 0–1 (Hematologically Cleared)';
+  let tmzAction = 'CLEARED FOR 100% FULL STUPP DOSE (200 mg/m²/day × 5 days)';
+  let tmzDosePct = 100;
+  let tmzStatus: 'optimal' | 'warning' | 'critical' = 'optimal';
+
+  if (plt < 25 || anc < 0.5 || hb < 8.0) {
+    ctcaeGrade = 'CTCAE Grade 4 (Life-Threatening Myelosuppression)';
+    tmzAction = 'DISCONTINUE / HOLD TMZ IMMEDIATELY • Urgent Platelet/G-CSF Support';
+    tmzDosePct = 0;
+    tmzStatus = 'critical';
+  } else if (plt < 50 || anc < 1.0 || hb < 9.5) {
+    ctcaeGrade = 'CTCAE Grade 3 (Severe Myelosuppression)';
+    tmzAction = 'HOLD TMZ CYCLE • Resume at 75% Dose (150 mg/m²) Only After ANC ≥1.5 & Plt ≥100';
+    tmzDosePct = 0;
+    tmzStatus = 'critical';
+  } else if (plt < 100 || anc < 1.5 || hb < 11.0) {
+    ctcaeGrade = 'CTCAE Grade 2 (Moderate Cytopenia)';
+    tmzAction = 'REDUCE TMZ DOSE TO 75% (150 mg/m²/day) • Weekly CBC Surveillance';
+    tmzDosePct = 75;
+    tmzStatus = 'warning';
+  }
+
+  const flags: string[] = [];
+  if (plt < 100) flags.push(`Thrombocytopenia (Plt ${plt.toFixed(0)}k < 100k neurosurgical hemostasis threshold)`);
+  if (inr > 1.25) flags.push(`Coagulopathy (INR ${inr.toFixed(2)} > 1.25 intracranial bleeding threshold)`);
+  if (sodium < 132) flags.push(`Hyponatremia / SIADH (Na⁺ ${sodium.toFixed(0)} mEq/L < 132 mEq/L cerebral edema risk)`);
+  if (hb < 10.0) flags.push(`Anemia (Hb ${hb.toFixed(1)} g/dL < 10.0 g/dL perioperative oxygen threshold)`);
+  if (dDimer > 1000) flags.push(`Hypercoagulable State (D-Dimer ${dDimer.toFixed(0)} ng/mL — screen for lower-extremity DVT)`);
+
+  let surgicalStatus = 'CLEARED FOR CRANIOTOMY';
+  let surgicalTier: 'optimal' | 'warning' | 'critical' = 'optimal';
+  let surgicalSummary =
+    'All hemostatic, electrolyte, and oxygen-carrying indices meet neurosurgical thresholds for maximal safe resection.';
+
+  if (flags.length > 0) {
+    if (plt < 100 || inr > 1.25 || sodium < 130) {
+      surgicalStatus = 'HOLD CRANIOTOMY — CORRECT ABNORMALITIES';
+      surgicalTier = 'critical';
+    } else {
+      surgicalStatus = 'CONDITIONAL CLEARANCE (PRE-OP OPTIMIZATION)';
+      surgicalTier = 'warning';
+    }
+    surgicalSummary = flags.join(' | ');
+  }
+
+  const vol = patient.volume_cm3;
+  const isWildtype = patient.biomarkers.idh1 === 'Wildtype' ? 1.0 : 0.0;
+
+  const gliomaLogit = 2.15 + 0.0038 * (gfap - 100) - 0.032 * Math.max(0, crp - 12) + 0.04 * vol;
+  const abscessLogit = -1.25 + 0.055 * Math.max(0, crp - 8) + 0.16 * Math.max(0, wbc - 10.5) - 0.0025 * gfap;
+  const pcnslLogit = -1.1 + 0.0085 * Math.max(0, ldh - 210) + 0.55 * Math.max(0, 1.3 - alc);
+  const demyelLogit = -1.35 - 0.03 * Math.max(0, crp - 5) - 0.002 * Math.max(0, gfap - 120) - 0.03 * vol;
+
+  const maxLogit = Math.max(gliomaLogit, abscessLogit, pcnslLogit, demyelLogit);
+  const exps = [
+    Math.exp(gliomaLogit - maxLogit),
+    Math.exp(abscessLogit - maxLogit),
+    Math.exp(pcnslLogit - maxLogit),
+    Math.exp(demyelLogit - maxLogit),
+  ];
+  const sumExp = exps.reduce((a, b) => a + b, 0);
+  const probs = exps.map((e) => +(e / sumExp).toFixed(4));
+
+  const differential: DifferentialItem[] = [
+    {
+      condition: 'Diffuse Glioma (Astrocytoma / Oligodendroglioma)',
+      probability: probs[0],
+      key_drivers: `3D FLAIR Infiltration (${vol} cm³) + Serum GFAP (${gfap.toFixed(0)} pg/mL)`,
+      color: '#087f72',
+    },
+    {
+      condition: 'Pyogenic Cerebral Abscess (Infectious Mimic)',
+      probability: probs[1],
+      key_drivers: `hs-CRP (${crp.toFixed(1)} mg/L) + Total WBC (${wbc.toFixed(1)} ×10³/µL)`,
+      color: '#f59e0b',
+    },
+    {
+      condition: 'Primary CNS Lymphoma (PCNSL)',
+      probability: probs[2],
+      key_drivers: `Serum LDH (${ldh.toFixed(0)} U/L) + Lymphocyte Count (${alc.toFixed(2)} ×10³/µL)`,
+      color: '#6366f1',
+    },
+    {
+      condition: 'Tumefactive Demyelinating Lesion (MS)',
+      probability: probs[3],
+      key_drivers: 'Subcortical White Matter + Low Systemic Acute-Phase Reactants',
+      color: '#64748b',
+    },
+  ].sort((a, b) => b.probability - a.probability);
+
+  const hgScore =
+    -1.95 +
+    0.0042 * (gfap - 110) +
+    0.24 * (nlr - 2.5) +
+    0.0009 * (dDimer - 350) +
+    0.003 * (ldh - 180) +
+    0.045 * (vol - 12) +
+    0.85 * isWildtype;
+  const highGradeProb = +(1 / (1 + Math.exp(-hgScore))).toFixed(3);
+  const predictedGrade =
+    highGradeProb >= 0.5
+      ? 'WHO CNS Grade 3/4 (High-Grade Transformation Risk)'
+      : 'WHO CNS Grade 2 (Lower-Grade Indolent Spectrum)';
+
+  const rawAttributions: AttributionItem[] = [
+    {
+      feature: '3D MRI FLAIR Volume & Asymmetry',
+      modality: '3.0T Brain MRI',
+      weight: 0.26 + 0.04 * (vol / 30),
+      value_display: `${vol} cm³ (HD95: ${patient.hd95_mm} mm)`,
+    },
+    {
+      feature: 'Serum GFAP (Liquid Biopsy BBB Leak)',
+      modality: 'Blood Biomarker',
+      weight: Math.min(0.28, 0.08 + gfap / 2500),
+      value_display: `${gfap.toFixed(0)} pg/mL`,
+    },
+    {
+      feature: 'Neutrophil-to-Lymphocyte Ratio (NLR)',
+      modality: 'Immune Index',
+      weight: Math.min(0.22, 0.07 + nlr / 45),
+      value_display: `${nlr.toFixed(2)} (SII: ${sii.toFixed(0)})`,
+    },
+    {
+      feature: 'hs-CRP & Leukocyte Differential',
+      modality: 'Blood Biomarker',
+      weight: Math.min(0.24, 0.06 + crp / 350),
+      value_display: `CRP ${crp.toFixed(1)} mg/L • WBC ${wbc.toFixed(1)}k`,
+    },
+    {
+      feature: 'Platelets & Coagulation (INR / D-Dimer)',
+      modality: 'Hemostasis',
+      weight: Math.min(0.18, 0.06 + Math.abs(240 - plt) / 2200 + dDimer / 12000),
+      value_display: `Plt ${plt.toFixed(0)}k • D-Dimer ${dDimer.toFixed(0)}`,
+    },
+    {
+      feature: 'Serum LDH & Metabolic Na⁺ / Glucose',
+      modality: 'Metabolic Panel',
+      weight: Math.min(0.16, 0.05 + ldh / 4500),
+      value_display: `LDH ${ldh.toFixed(0)} U/L • Na⁺ ${sodium.toFixed(0)} mEq/L`,
+    },
+  ];
+  const sumW = rawAttributions.reduce((acc, item) => acc + item.weight, 0);
+  const attributions = rawAttributions
+    .map((item) => ({ ...item, weight: +(item.weight / sumW).toFixed(3) }))
+    .sort((a, b) => b.weight - a.weight);
+
+  return {
+    patient_id: patient.patient_id,
+    panel,
+    indices: {
+      nlr,
+      sii,
+      nlr_tier: nlrTier,
+      nlr_status: nlrStatus,
+      bbb_disruption_index: +Math.min(100, (gfap / 650) * 100).toFixed(1),
+    },
+    chemo_safety: {
+      ctcae_grade: ctcaeGrade,
+      tmz_action: tmzAction,
+      tmz_dose_pct: tmzDosePct,
+      status: tmzStatus,
+    },
+    surgical_clearance: {
+      status: surgicalStatus,
+      tier: surgicalTier,
+      summary: surgicalSummary,
+      flags,
+    },
+    multimodal_fusion: {
+      high_grade_probability: highGradeProb,
+      low_grade_probability: +(1 - highGradeProb).toFixed(3),
+      predicted_grade: predictedGrade,
+      mri_modality_gate: 0.62,
+      blood_modality_gate: 0.38,
+      differential_diagnosis: differential,
+      attributions,
+    },
+  };
+}
+
 export const DEFAULT_COHORT: PatientRecord[] = [
   {
     patient_id: 'TCGA-CS-4941',
@@ -547,7 +1115,96 @@ export const neuroApi = {
     }
   },
 
-  async generateReport(patient: PatientRecord, volumetry: VolumetryData, indication: string): Promise<{ source: string; report_markdown: string }> {
+  async getHematology(patient: PatientRecord): Promise<HematologyAnalysis> {
+    const defaultPanel =
+      PATIENT_DEFAULT_BLOOD_PANELS[patient.patient_id] ||
+      PATIENT_DEFAULT_BLOOD_PANELS['TCGA-CS-4941'];
+    try {
+      const res = await fetch(`/api/hematology/${encodeURIComponent(patient.patient_id)}`);
+      if (!res.ok) throw new Error('Backend offline');
+      const data = await res.json();
+      return data.analysis;
+    } catch {
+      return computeClientHematologyAnalysis(patient, defaultPanel);
+    }
+  },
+
+  async analyzeHematology(
+    patient: PatientRecord,
+    panel: BloodPanelValues
+  ): Promise<HematologyAnalysis> {
+    try {
+      const res = await fetch('/api/hematology/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id: patient.patient_id, panel }),
+      });
+      if (!res.ok) throw new Error('Backend offline');
+      const data = await res.json();
+      return data.analysis;
+    } catch {
+      return computeClientHematologyAnalysis(patient, panel);
+    }
+  },
+
+  async parseBloodReportText(
+    patient: PatientRecord,
+    rawText: string
+  ): Promise<{ extracted_panel: BloodPanelValues; analysis: HematologyAnalysis }> {
+    try {
+      const res = await fetch('/api/hematology/parse-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id: patient.patient_id, raw_text: rawText }),
+      });
+      if (!res.ok) throw new Error('Backend offline');
+      return await res.json();
+    } catch {
+      const base: BloodPanelValues = {
+        ...(PATIENT_DEFAULT_BLOOD_PANELS[patient.patient_id] ||
+          PATIENT_DEFAULT_BLOOD_PANELS['TCGA-CS-4941']),
+      };
+      const regexMap: Array<[keyof BloodPanelValues, RegExp]> = [
+        ['hemoglobin_g_dl', /(?:hemoglobin|hb|hgb)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['wbc_10e3_ul', /(?:wbc|white blood cell|leukocytes)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['neutrophils_anc_10e3_ul', /(?:anc|neutrophils|neut)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['lymphocytes_alc_10e3_ul', /(?:alc|lymphocytes|lymph)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['platelets_10e3_ul', /(?:platelets|plt)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['inr', /(?:inr|prothrombin)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['d_dimer_ng_ml', /(?:d-dimer|ddimer|d dimer)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['sodium_meq_l', /(?:sodium|na\+?)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['glucose_mg_dl', /(?:glucose|fbs|blood sugar)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['crp_mg_l', /(?:crp|c-reactive protein|hs-crp)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['ldh_u_l', /(?:ldh|lactate dehydrogenase)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+        ['serum_gfap_pg_ml', /(?:gfap|glial fibrillary)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/i],
+      ];
+      for (const [key, rx] of regexMap) {
+        const m = rawText.match(rx);
+        if (m) {
+          const val = parseFloat(m[1]);
+          if (!Number.isNaN(val)) base[key] = val;
+        }
+      }
+      return {
+        extracted_panel: base,
+        analysis: computeClientHematologyAnalysis(patient, base),
+      };
+    }
+  },
+
+  async generateReport(
+    patient: PatientRecord,
+    volumetry: VolumetryData,
+    indication: string,
+    hematology?: HematologyAnalysis
+  ): Promise<{ source: string; report_markdown: string }> {
+    const hema =
+      hematology ||
+      computeClientHematologyAnalysis(
+        patient,
+        PATIENT_DEFAULT_BLOOD_PANELS[patient.patient_id] ||
+          PATIENT_DEFAULT_BLOOD_PANELS['TCGA-CS-4941']
+      );
     try {
       const res = await fetch('/api/generate-report', {
         method: 'POST',
@@ -558,15 +1215,17 @@ export const neuroApi = {
           patient_gender: patient.sex,
           indication,
           volumetry,
+          hematology: hema,
         }),
       });
       if (!res.ok) throw new Error('Backend offline');
       return await res.json();
     } catch {
+      const topDiff = hema.multimodal_fusion.differential_diagnosis[0];
       return {
-        source: 'NeuroSeg v3.0 ACR/RSNA Autonomous Synthesis Engine',
-        report_markdown: `# NEURO-RADIOLOGY MRI CONSULTATION REPORT
-**Department of Diagnostic & Molecular Neuro-Imaging**
+        source: 'NeuroSeg v3.0 Multimodal MRI + Hematology Engine',
+        report_markdown: `# MULTIDISCIPLINARY NEURO-ONCOLOGY & MRI CONSULTATION REPORT
+**Department of Diagnostic Neuro-Imaging & Molecular Neuro-Hematology**
 
 ---
 
@@ -589,19 +1248,27 @@ export const neuroApi = {
 
 ---
 
-### 3. MULTI-MODAL MORPHOLOGIC & EXPLAINABILITY FINDINGS
+### 3. NEURO-HEMATOLOGY, LIQUID BIOPSY & SURGICAL/CHEMO CLEARANCE
+• **Systemic Immune-Inflammation Profile:** NLR = **${hema.indices.nlr}** (${hema.indices.nlr_tier}) | SII = **${hema.indices.sii}**
+• **Astroglial Liquid Biopsy & Acute Phase:** Serum GFAP = **${hema.panel.serum_gfap_pg_ml} pg/mL** | hs-CRP = **${hema.panel.crp_mg_l} mg/L** | Serum LDH = **${hema.panel.ldh_u_l} U/L**
+• **Complete Blood Count & Coagulation:** Hb **${hema.panel.hemoglobin_g_dl} g/dL** | WBC **${hema.panel.wbc_10e3_ul} ×10³/µL** (ANC ${hema.panel.neutrophils_anc_10e3_ul} / ALC ${hema.panel.lymphocytes_alc_10e3_ul}) | Platelets **${hema.panel.platelets_10e3_ul} ×10³/µL** | INR **${hema.panel.inr}** | D-Dimer **${hema.panel.d_dimer_ng_ml} ng/mL** | Na⁺ **${hema.panel.sodium_meq_l} mEq/L**
+• **Pre-Craniotomy Surgical Clearance:** **${hema.surgical_clearance.status}** — ${hema.surgical_clearance.summary}
+• **Adjuvant Temozolomide (CTCAE v5.0) Audit:** **${hema.chemo_safety.ctcae_grade}** → ${hema.chemo_safety.tmz_action}
+• **Cross-Modal MRI + Blood Fusion Posterior:** **${topDiff.condition} (${(topDiff.probability * 100).toFixed(1)}%)** | Predicted Grade: **${hema.multimodal_fusion.predicted_grade}**
+
+---
+
+### 4. MULTI-MODAL MORPHOLOGIC & EXPLAINABILITY FINDINGS
 1. **Primary Parenchymal Lesion:**
    Well-delineated T2/FLAIR hyperintense intra-axial lesion centered in the **${patient.location}**. Bi-hemispheric contralateral cross-attention confirms significant sagittal asymmetry with respect to normal contralateral white matter tracts.
 2. **Boundary & Epistemic Uncertainty Audit:**
    Spectral Fourier high-pass attention gates (α ∈ [0,1]) isolate infiltrative peritumoral margins. Bayesian Monte Carlo dropout reveals low epistemic variance across the necrotic/solid core (p > 0.94) with a localized uncertainty halo (H = 0.14 bits) along the medial corticospinal interface.
-3. **Mass Effect & Ventricular System:**
-   Mild regional sulcal effacement without uncal or subfalcine herniation. Basal cisterns and major dural venous sinuses remain patent.
 
 ---
 
-### 4. IMPRESSION & MULTIDISCIPLINARY RECOMMENDATION
-• **Impression:** ${patient.volume_cm3} cm³ infiltrative intra-axial mass in the ${patient.location}, consistent with **${patient.histology} (${patient.who_grade})**.
-• **Action Triage:** **${patient.urgency.toUpperCase()}** — Recommend functional MRI tractography overlay using the exported NeuroSeg epistemic uncertainty contour to preserve eloquent cortex during maximal safe resection.`,
+### 5. IMPRESSION & MULTIDISCIPLINARY RECOMMENDATION
+• **Impression:** ${patient.volume_cm3} cm³ infiltrative intra-axial mass in the ${patient.location}, consistent with **${topDiff.condition}** (${(topDiff.probability * 100).toFixed(1)}% Cross-Modal Bayesian Posterior).
+• **Action Triage:** **${patient.urgency.toUpperCase()}** — Correlate pre-craniotomy hemostatic clearance and CTCAE v5.0 Temozolomide dosing status prior to neurosurgical resection or adjuvant chemotherapy.`,
       };
     }
   },

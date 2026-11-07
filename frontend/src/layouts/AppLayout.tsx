@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   ChevronDown,
   Command,
+  Droplets,
   FileText,
   FlaskConical,
   GitCompare,
@@ -30,6 +31,7 @@ export interface AppLayoutProps {
 const navItems = [
   { label: 'Clinical Overview', path: '/dashboard', Icon: LayoutDashboard },
   { label: 'PACS Workstation', path: '/workstation', Icon: Layers, badge: '3D' },
+  { label: 'Neuro-Hematology Lab', path: '/hematology', Icon: Droplets, isNew: true },
   { label: 'Uncertainty & ECE Lab', path: '/uncertainty', Icon: ShieldAlert, isNew: true },
   { label: '5-Way Ablation Lab', path: '/ablation', Icon: FlaskConical, isNew: true },
   { label: 'Longitudinal RANO', path: '/longitudinal', Icon: GitCompare, isNew: true },
