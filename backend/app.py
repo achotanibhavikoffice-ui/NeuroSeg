@@ -10,6 +10,7 @@ Exposes endpoints for:
 """
 
 import base64
+import csv
 import io
 import os
 import sys
@@ -291,6 +292,158 @@ COHORT_PATIENTS = [
     },
 ]
 
+PATIENT_NAMES_POOL = [
+    "Aarav Mehta", "Elena Rostova", "Marcus Vance", "Sophia Lindqvist",
+    "Vikramaditya Rao", "Claire Beaumont", "Daniel O'Connor", "Amara Okafor",
+    "Hiroshi Takahashi", "Nadia Al-Mansoor", "Lucas Fernandez", "Priya Nair",
+    "Julian Thorne", "Hannah Goldstein", "Mateo Silva", "Ananya Chatterjee",
+    "Sebastian Cross", "Mei-Ling Zhou", "Gabriel Moreau", "Zoya Siddiqui",
+]
+
+SCAN_SEQUENCES = [
+    "Axial T2-FLAIR + Post-Gd T1 (3.0T)",
+    "Axial 3D T2-FLAIR Volumetric (3.0T)",
+    "Multi-Planar T1/T2/FLAIR + DWI (3.0T)",
+    "Axial T2-FLAIR + DSC Perfusion (3.0T)",
+]
+
+ALL_DIRECTORY_PATIENTS: Optional[List[Dict[str, Any]]] = None
+CSV_BLOOD_PANELS: Dict[str, Dict[str, float]] = {}
+
+
+def _classify_triage_level(urgency: str, volume_cm3: float, who_grade: str) -> str:
+    u = urgency.lower()
+    if "urgent" in u or "hold" in u or volume_cm3 >= 26.0:
+        return "Urgent"
+    if "neurosurgical" in u or "priority" in u or "grade 3" in who_grade.lower() or volume_cm3 >= 16.0:
+        return "Priority"
+    if "follow-up" in u or volume_cm3 >= 10.0:
+        return "Follow-up"
+    return "Routine"
+
+
+def get_all_directory_patients() -> List[Dict[str, Any]]:
+    """
+    Loads the 12 flagship TCGA-LGG studies + all 300 unique patients dynamically
+    from data/tcga_lgg_multimodal_12000.csv.
+    """
+    global ALL_DIRECTORY_PATIENTS
+    if ALL_DIRECTORY_PATIENTS is not None:
+        return ALL_DIRECTORY_PATIENTS
+
+    directory: List[Dict[str, Any]] = []
+    seen_ids = set()
+
+    # 1. Enrich the 12 Flagship Cohort Patients
+    for idx, pat in enumerate(COHORT_PATIENTS):
+        enriched = dict(pat)
+        enriched["name"] = f"{PATIENT_NAMES_POOL[idx % len(PATIENT_NAMES_POOL)]} ({pat['patient_id']})"
+        enriched["scan_date"] = f"2026-10-{28 - idx:02d}"
+        enriched["sequence"] = SCAN_SEQUENCES[idx % len(SCAN_SEQUENCES)]
+        enriched["triage_level"] = _classify_triage_level(pat["urgency"], pat["volume_cm3"], pat["who_grade"])
+        enriched["analysis_status"] = "Analyzed"
+        directory.append(enriched)
+        seen_ids.add(pat["patient_id"])
+
+    # 2. Load additional unique patients from data/tcga_lgg_multimodal_12000.csv
+    csv_path = os.path.join(os.path.dirname(__file__), "..", "data", "tcga_lgg_multimodal_12000.csv")
+    if os.path.exists(csv_path):
+        with open(csv_path, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                pid = row["patient_id"]
+                if pid in seen_ids:
+                    continue
+                seen_ids.add(pid)
+                idx = len(directory)
+                vol = float(row["volume_cm3"])
+                recist = float(row["recist_mm"])
+                hd95 = float(row["hd95_mm"])
+                dsc = float(row["dsc"])
+                ece = float(row["ece"])
+                is_hg = int(float(row["who_grade_label"])) == 1
+                who_grade = "WHO CNS Grade 3" if is_hg else "WHO CNS Grade 2"
+                idh_wt = int(float(row["idh1_wildtype"])) == 1
+
+                if is_hg and vol >= 26.0:
+                    urgency = "Urgent Resection Planning"
+                    triage_level = "Urgent"
+                elif is_hg or vol >= 17.5:
+                    urgency = "Neurosurgical Review"
+                    triage_level = "Priority"
+                elif vol >= 11.0:
+                    urgency = "Oncologic Follow-Up"
+                    triage_level = "Follow-up"
+                else:
+                    urgency = "Routine Surveillance"
+                    triage_level = "Routine"
+
+                # Mark ~10% of later scans as "Pending" volumetric sign-off while still inspectable
+                analysis_status = "Pending" if (idx > 25 and idx % 9 == 0) else "Analyzed"
+                num_id = pid.split("-")[-1]
+                month = 10 if idx < 90 else (9 if idx < 190 else 8)
+                day = max(1, 28 - (idx % 27))
+
+                pat_obj = {
+                    "patient_id": pid,
+                    "mrn": f"MRN-{num_id}0-LGG",
+                    "name": f"{PATIENT_NAMES_POOL[idx % len(PATIENT_NAMES_POOL)]} ({pid})",
+                    "age": int(row["age"]),
+                    "sex": row["sex"],
+                    "who_grade": who_grade,
+                    "histology": row["histology"],
+                    "biomarkers": {
+                        "idh1": "Wildtype" if idh_wt else "Mutant",
+                        "codel_1p19q": "Codeleted" if "Oligodendroglioma" in row["histology"] else "Intact",
+                        "mgmt": "Unmethylated" if idh_wt else "Methylated",
+                    },
+                    "location": row["location"],
+                    "volume_cm3": vol,
+                    "recist_mm": recist,
+                    "dsc": round(dsc, 3),
+                    "hd95_mm": hd95,
+                    "ece": round(ece, 3),
+                    "urgency": urgency,
+                    "status": "Pending Sign-Off" if analysis_status == "Pending" else "Verified",
+                    "triage_level": triage_level,
+                    "scan_date": f"2026-{month:02d}-{day:02d}",
+                    "sequence": SCAN_SEQUENCES[idx % len(SCAN_SEQUENCES)],
+                    "analysis_status": analysis_status,
+                    "seed": 1000 + idx,
+                }
+                directory.append(pat_obj)
+                CSV_BLOOD_PANELS[pid] = {
+                    "hemoglobin_g_dl": float(row["hemoglobin_g_dl"]),
+                    "wbc_10e3_ul": float(row["wbc_10e3_ul"]),
+                    "neutrophils_anc_10e3_ul": float(row["neutrophils_anc_10e3_ul"]),
+                    "lymphocytes_alc_10e3_ul": float(row["lymphocytes_alc_10e3_ul"]),
+                    "platelets_10e3_ul": float(row["platelets_10e3_ul"]),
+                    "inr": float(row["inr"]),
+                    "d_dimer_ng_ml": float(row["d_dimer_ng_ml"]),
+                    "sodium_meq_l": float(row["sodium_meq_l"]),
+                    "glucose_mg_dl": float(row["glucose_mg_dl"]),
+                    "crp_mg_l": float(row["crp_mg_l"]),
+                    "ldh_u_l": float(row["ldh_u_l"]),
+                    "serum_gfap_pg_ml": float(row["serum_gfap_pg_ml"]),
+                }
+
+    ALL_DIRECTORY_PATIENTS = directory
+    return ALL_DIRECTORY_PATIENTS
+
+
+def resolve_patient(patient_id: str) -> Dict[str, Any]:
+    all_pats = get_all_directory_patients()
+    return next((p for p in all_pats if p["patient_id"] == patient_id), all_pats[0])
+
+
+def resolve_blood_panel(patient_id: str) -> Dict[str, float]:
+    get_all_directory_patients()
+    if patient_id in PATIENT_DEFAULT_PANELS:
+        return PATIENT_DEFAULT_PANELS[patient_id]
+    if patient_id in CSV_BLOOD_PANELS:
+        return CSV_BLOOD_PANELS[patient_id]
+    return PATIENT_DEFAULT_PANELS["TCGA-CS-4941"]
+
 
 def get_model() -> AttentionUNet:
     global MODEL
@@ -357,10 +510,81 @@ def get_engine_status():
 
 @app.get("/api/cohort")
 def get_cohort():
+    all_patients = get_all_directory_patients()
     return {
         "status": "success",
-        "total_patients": len(COHORT_PATIENTS),
-        "patients": COHORT_PATIENTS,
+        "total_patients": len(all_patients),
+        "patients": all_patients,
+    }
+
+
+@app.get("/api/patients")
+def get_patients_directory(
+    search: str = "",
+    status: str = "ALL",
+    gender: str = "ALL",
+    age_bracket: str = "ALL",
+    page: int = 1,
+    page_size: int = 15,
+):
+    """
+    Paginated & filterable Patient Directory endpoint backed by the 12,000-sample
+    TCGA-LGG multimodal dataset (300 unique patients).
+    """
+    all_patients = get_all_directory_patients()
+    q = search.strip().lower()
+
+    summary_counts = {
+        "total": len(all_patients),
+        "urgent": sum(1 for p in all_patients if p.get("triage_level") == "Urgent"),
+        "priority": sum(1 for p in all_patients if p.get("triage_level") == "Priority"),
+        "followup": sum(1 for p in all_patients if p.get("triage_level") == "Follow-up"),
+        "routine": sum(1 for p in all_patients if p.get("triage_level") == "Routine"),
+    }
+
+    filtered = []
+    for p in all_patients:
+        if q:
+            haystack = f"{p['patient_id']} {p['mrn']} {p['name']} {p['histology']} {p['location']} {p['urgency']}".lower()
+            if q not in haystack:
+                continue
+
+        if status.upper() != "ALL":
+            if status.lower() == "pending":
+                if p.get("analysis_status") != "Pending":
+                    continue
+            elif p.get("triage_level", "").lower() != status.lower():
+                continue
+
+        if gender.upper() != "ALL" and p["sex"].lower() != gender.lower():
+            continue
+
+        if age_bracket.upper() != "ALL":
+            age = int(p["age"])
+            if age_bracket == "UNDER_35" and age >= 35:
+                continue
+            elif age_bracket == "35_50" and (age < 35 or age > 50):
+                continue
+            elif age_bracket == "OVER_50" and age <= 50:
+                continue
+
+        filtered.append(p)
+
+    total_filtered = len(filtered)
+    page = max(1, page)
+    page_size = max(1, min(100, page_size))
+    total_pages = max(1, (total_filtered + page_size - 1) // page_size)
+    start_idx = (page - 1) * page_size
+    paginated = filtered[start_idx : start_idx + page_size]
+
+    return {
+        "status": "success",
+        "total": total_filtered,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "summary_counts": summary_counts,
+        "patients": paginated,
     }
 
 
@@ -403,7 +627,7 @@ def get_demo_stack(patient_id: str = "TCGA-CS-4941", num_slices: int = 16, mc_pa
     """
     t0 = time.time()
     model = get_model()
-    patient = next((p for p in COHORT_PATIENTS if p["patient_id"] == patient_id), COHORT_PATIENTS[0])
+    patient = resolve_patient(patient_id)
     dataset = SyntheticBrainMRIDataset(num_samples=num_slices, image_size=128, seed=patient["seed"])
 
     slices_data = []
@@ -605,8 +829,8 @@ class HematologyParseRequest(BaseModel):
 @app.get("/api/hematology/{patient_id}")
 def get_patient_hematology(patient_id: str = "TCGA-CS-4941"):
     """Returns baseline peripheral blood panel, metadata, presets, and Cross-Modal MRI+Blood fusion analysis."""
-    patient = next((p for p in COHORT_PATIENTS if p["patient_id"] == patient_id), COHORT_PATIENTS[0])
-    default_panel = PATIENT_DEFAULT_PANELS.get(patient["patient_id"], PATIENT_DEFAULT_PANELS["TCGA-CS-4941"])
+    patient = resolve_patient(patient_id)
+    default_panel = resolve_blood_panel(patient["patient_id"])
     analysis = analyze_blood_and_mri_fusion(patient, default_panel)
     return {
         "status": "success",
@@ -620,7 +844,7 @@ def get_patient_hematology(patient_id: str = "TCGA-CS-4941"):
 @app.post("/api/hematology/analyze")
 def post_analyze_hematology(req: HematologyAnalyzeRequest):
     """Computes live Cross-Modal Gated MRI + Blood Biomarker fusion for custom biomarker sliders."""
-    patient = next((p for p in COHORT_PATIENTS if p["patient_id"] == req.patient_id), COHORT_PATIENTS[0])
+    patient = resolve_patient(req.patient_id)
     analysis = analyze_blood_and_mri_fusion(patient, req.panel)
     return {
         "status": "success",
@@ -631,7 +855,7 @@ def post_analyze_hematology(req: HematologyAnalyzeRequest):
 @app.post("/api/hematology/parse-report")
 def post_parse_blood_report(req: HematologyParseRequest):
     """Parses uploaded/pasted clinical blood report text and runs Cross-Modal MRI+Blood fusion."""
-    patient = next((p for p in COHORT_PATIENTS if p["patient_id"] == req.patient_id), COHORT_PATIENTS[0])
+    patient = resolve_patient(req.patient_id)
     extracted_panel = parse_blood_report_text(req.raw_text, fallback_patient_id=patient["patient_id"])
     analysis = analyze_blood_and_mri_fusion(patient, extracted_panel)
     return {
@@ -652,10 +876,10 @@ class ReportRequest(BaseModel):
 
 @app.post("/api/generate-report")
 def generate_report(req: ReportRequest):
-    patient = next((p for p in COHORT_PATIENTS if p["patient_id"] == req.patient_id), COHORT_PATIENTS[0])
+    patient = resolve_patient(req.patient_id)
     hema_data = req.hematology
     if hema_data is None:
-        default_panel = PATIENT_DEFAULT_PANELS.get(patient["patient_id"], PATIENT_DEFAULT_PANELS["TCGA-CS-4941"])
+        default_panel = resolve_blood_panel(patient["patient_id"])
         hema_data = analyze_blood_and_mri_fusion(patient, default_panel)
     return REPORT_GEN.generate_report(
         patient_id=req.patient_id,

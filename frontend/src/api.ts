@@ -22,6 +22,35 @@ export interface PatientRecord {
   urgency: string;
   status: string;
   seed: number;
+  triage_level?: 'Urgent' | 'Priority' | 'Follow-up' | 'Routine';
+  scan_date?: string;
+  sequence?: string;
+  analysis_status?: 'Analyzed' | 'Pending';
+}
+
+export interface PatientsDirectoryQuery {
+  search?: string;
+  status?: string;
+  gender?: string;
+  age_bracket?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface PatientsDirectoryResponse {
+  status: string;
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  summary_counts: {
+    total: number;
+    urgent: number;
+    priority: number;
+    followup: number;
+    routine: number;
+  };
+  patients: PatientRecord[];
 }
 
 export interface SliceData {
@@ -784,11 +813,74 @@ export function computeClientHematologyAnalysis(
   };
 }
 
-export const DEFAULT_COHORT: PatientRecord[] = [
+const CLIENT_NAMES_POOL = [
+  'Aarav Mehta',
+  'Elena Rostova',
+  'Marcus Vance',
+  'Sophia Lindqvist',
+  'Vikramaditya Rao',
+  'Claire Beaumont',
+  "Daniel O'Connor",
+  'Amara Okafor',
+  'Hiroshi Takahashi',
+  'Nadia Al-Mansoor',
+  'Lucas Fernandez',
+  'Priya Nair',
+  'Julian Thorne',
+  'Hannah Goldstein',
+  'Mateo Silva',
+  'Ananya Chatterjee',
+  'Sebastian Cross',
+  'Mei-Ling Zhou',
+  'Gabriel Moreau',
+  'Zoya Siddiqui',
+];
+
+const CLIENT_SEQUENCES = [
+  'Axial T2-FLAIR + Post-Gd T1 (3.0T)',
+  'Axial 3D T2-FLAIR Volumetric (3.0T)',
+  'Multi-Planar T1/T2/FLAIR + DWI (3.0T)',
+  'Axial T2-FLAIR + DSC Perfusion (3.0T)',
+];
+
+const CLIENT_LOCATIONS = [
+  'Left Frontal-Insular Lobe',
+  'Right Frontotemporal Cortex',
+  'Left Parieto-Occipital White Matter',
+  'Right Superior Frontal Gyrus',
+  'Left Temporal Hippocampal Gyrus',
+  'Right Parietal Centrum Semiovale',
+  'Left Supplementary Motor Area',
+  'Right Insular-Opercular Cortex',
+  'Bifrontal Corpus Callosum Genu',
+  'Left Occipitotemporal Fusiform Gyrus',
+  'Right Premotor Frontal Cortex',
+  'Left Inferior Parietal Lobule',
+];
+
+function classifyTriageLevel(
+  urgency: string,
+  volumeCm3: number,
+  whoGrade: string
+): 'Urgent' | 'Priority' | 'Follow-up' | 'Routine' {
+  const u = urgency.toLowerCase();
+  if (u.includes('urgent') || u.includes('hold') || volumeCm3 >= 26.0) return 'Urgent';
+  if (
+    u.includes('neurosurgical') ||
+    u.includes('priority') ||
+    whoGrade.toLowerCase().includes('grade 3') ||
+    volumeCm3 >= 16.0
+  )
+    return 'Priority';
+  if (u.includes('follow-up') || volumeCm3 >= 10.0) return 'Follow-up';
+  return 'Routine';
+}
+
+const FLAGSHIP_12_PATIENTS: PatientRecord[] = [
   {
     patient_id: 'TCGA-CS-4941',
     mrn: 'MRN-84920-LGG',
-    name: 'Patient TCGA-CS-4941',
+    name: 'Aarav Mehta (TCGA-CS-4941)',
     age: 47,
     sex: 'Male',
     who_grade: 'WHO CNS Grade 2',
@@ -802,12 +894,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.018,
     urgency: 'Neurosurgical Review',
     status: 'Active Study',
+    triage_level: 'Priority',
+    scan_date: '2026-10-28',
+    sequence: CLIENT_SEQUENCES[0],
+    analysis_status: 'Analyzed',
     seed: 101,
   },
   {
     patient_id: 'TCGA-DU-5872',
     mrn: 'MRN-73104-LGG',
-    name: 'Patient TCGA-DU-5872',
+    name: 'Elena Rostova (TCGA-DU-5872)',
     age: 39,
     sex: 'Female',
     who_grade: 'WHO CNS Grade 2',
@@ -821,12 +917,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.021,
     urgency: 'Oncologic Follow-Up',
     status: 'Verified',
+    triage_level: 'Follow-up',
+    scan_date: '2026-10-27',
+    sequence: CLIENT_SEQUENCES[1],
+    analysis_status: 'Analyzed',
     seed: 202,
   },
   {
     patient_id: 'TCGA-FG-6689',
     mrn: 'MRN-91255-LGG',
-    name: 'Patient TCGA-FG-6689',
+    name: 'Marcus Vance (TCGA-FG-6689)',
     age: 54,
     sex: 'Male',
     who_grade: 'WHO CNS Grade 3',
@@ -840,12 +940,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.024,
     urgency: 'Urgent Resection Planning',
     status: 'Priority Triage',
+    triage_level: 'Urgent',
+    scan_date: '2026-10-26',
+    sequence: CLIENT_SEQUENCES[2],
+    analysis_status: 'Analyzed',
     seed: 303,
   },
   {
     patient_id: 'TCGA-HT-7684',
     mrn: 'MRN-60419-LGG',
-    name: 'Patient TCGA-HT-7684',
+    name: 'Sophia Lindqvist (TCGA-HT-7684)',
     age: 33,
     sex: 'Female',
     who_grade: 'WHO CNS Grade 2',
@@ -859,12 +963,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.015,
     urgency: 'Routine Surveillance',
     status: 'Stable',
+    triage_level: 'Routine',
+    scan_date: '2026-10-25',
+    sequence: CLIENT_SEQUENCES[3],
+    analysis_status: 'Analyzed',
     seed: 404,
   },
   {
     patient_id: 'TCGA-DB-5273',
     mrn: 'MRN-52819-LGG',
-    name: 'Patient TCGA-DB-5273',
+    name: 'Vikramaditya Rao (TCGA-DB-5273)',
     age: 44,
     sex: 'Male',
     who_grade: 'WHO CNS Grade 2',
@@ -878,12 +986,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.019,
     urgency: 'Neurosurgical Review',
     status: 'Active Study',
+    triage_level: 'Priority',
+    scan_date: '2026-10-24',
+    sequence: CLIENT_SEQUENCES[0],
+    analysis_status: 'Analyzed',
     seed: 505,
   },
   {
     patient_id: 'TCGA-EZ-7264',
     mrn: 'MRN-72904-LGG',
-    name: 'Patient TCGA-EZ-7264',
+    name: 'Claire Beaumont (TCGA-EZ-7264)',
     age: 51,
     sex: 'Female',
     who_grade: 'WHO CNS Grade 3',
@@ -897,12 +1009,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.022,
     urgency: 'Hold TMZ (Thrombocytopenia)',
     status: 'Chemo Alert',
+    triage_level: 'Urgent',
+    scan_date: '2026-10-23',
+    sequence: CLIENT_SEQUENCES[1],
+    analysis_status: 'Analyzed',
     seed: 606,
   },
   {
     patient_id: 'TCGA-HW-8319',
     mrn: 'MRN-83190-LGG',
-    name: 'Patient TCGA-HW-8319',
+    name: "Daniel O'Connor (TCGA-HW-8319)",
     age: 36,
     sex: 'Male',
     who_grade: 'WHO CNS Grade 2',
@@ -916,12 +1032,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.016,
     urgency: 'Oncologic Follow-Up',
     status: 'Verified',
+    triage_level: 'Follow-up',
+    scan_date: '2026-10-22',
+    sequence: CLIENT_SEQUENCES[2],
+    analysis_status: 'Analyzed',
     seed: 707,
   },
   {
     patient_id: 'TCGA-IK-9412',
     mrn: 'MRN-94120-LGG',
-    name: 'Patient TCGA-IK-9412',
+    name: 'Amara Okafor (TCGA-IK-9412)',
     age: 59,
     sex: 'Male',
     who_grade: 'WHO CNS Grade 3',
@@ -935,12 +1055,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.025,
     urgency: 'Urgent Resection Planning',
     status: 'Priority Triage',
+    triage_level: 'Urgent',
+    scan_date: '2026-10-21',
+    sequence: CLIENT_SEQUENCES[3],
+    analysis_status: 'Analyzed',
     seed: 808,
   },
   {
     patient_id: 'TCGA-P5-6198',
     mrn: 'MRN-61982-LGG',
-    name: 'Patient TCGA-P5-6198',
+    name: 'Hiroshi Takahashi (TCGA-P5-6198)',
     age: 41,
     sex: 'Female',
     who_grade: 'WHO CNS Grade 2',
@@ -954,12 +1078,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.018,
     urgency: 'Neurosurgical Review',
     status: 'Active Study',
+    triage_level: 'Priority',
+    scan_date: '2026-10-20',
+    sequence: CLIENT_SEQUENCES[0],
+    analysis_status: 'Analyzed',
     seed: 909,
   },
   {
     patient_id: 'TCGA-QH-4821',
     mrn: 'MRN-48215-LGG',
-    name: 'Patient TCGA-QH-4821',
+    name: 'Nadia Al-Mansoor (TCGA-QH-4821)',
     age: 49,
     sex: 'Male',
     who_grade: 'WHO CNS Grade 3',
@@ -973,12 +1101,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.021,
     urgency: 'Urgent Resection Planning',
     status: 'Priority Triage',
+    triage_level: 'Urgent',
+    scan_date: '2026-10-19',
+    sequence: CLIENT_SEQUENCES[1],
+    analysis_status: 'Analyzed',
     seed: 1010,
   },
   {
     patient_id: 'TCGA-S9-7405',
     mrn: 'MRN-74053-LGG',
-    name: 'Patient TCGA-S9-7405',
+    name: 'Lucas Fernandez (TCGA-S9-7405)',
     age: 29,
     sex: 'Female',
     who_grade: 'WHO CNS Grade 2',
@@ -992,12 +1124,16 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.014,
     urgency: 'Routine Surveillance',
     status: 'Stable',
+    triage_level: 'Routine',
+    scan_date: '2026-10-18',
+    sequence: CLIENT_SEQUENCES[2],
+    analysis_status: 'Analyzed',
     seed: 1111,
   },
   {
     patient_id: 'TCGA-TM-8830',
     mrn: 'MRN-88309-LGG',
-    name: 'Patient TCGA-TM-8830',
+    name: 'Priya Nair (TCGA-TM-8830)',
     age: 56,
     sex: 'Female',
     who_grade: 'WHO CNS Grade 3',
@@ -1011,9 +1147,80 @@ export const DEFAULT_COHORT: PatientRecord[] = [
     ece: 0.023,
     urgency: 'Urgent Resection Planning',
     status: 'Priority Triage',
+    triage_level: 'Urgent',
+    scan_date: '2026-10-17',
+    sequence: CLIENT_SEQUENCES[3],
+    analysis_status: 'Analyzed',
     seed: 1212,
   },
 ];
+
+function buildFullClientDirectory(): PatientRecord[] {
+  const list: PatientRecord[] = [...FLAGSHIP_12_PATIENTS];
+  for (let i = 1; i <= 288; i++) {
+    const idx = list.length;
+    const pid = `TCGA-LGG-${1000 + i}`;
+    const isHighGrade = i % 3 === 0;
+    const vol = isHighGrade
+      ? +(18.5 + ((i * 7.3) % 24.0)).toFixed(2)
+      : +(5.8 + ((i * 4.7) % 16.5)).toFixed(2);
+    const recist = +(vol * 1.38 + 3.2).toFixed(1);
+    const dsc = +(0.902 + ((i * 13) % 38) / 1000).toFixed(3);
+    const hd95 = +(2.45 + ((i * 11) % 19) / 10).toFixed(2);
+    const ece = +(0.014 + ((i * 7) % 12) / 1000).toFixed(3);
+    const age = 25 + ((i * 17) % 48);
+    const sex = i % 2 === 0 ? 'Female' : 'Male';
+    const whoGrade = isHighGrade ? 'WHO CNS Grade 3' : 'WHO CNS Grade 2';
+    const histology = isHighGrade
+      ? 'Anaplastic Astrocytoma, IDH-wildtype'
+      : i % 2 === 0
+      ? 'Oligodendroglioma, IDH-mutant, 1p/19q-codeleted'
+      : 'Diffuse Astrocytoma, IDH-mutant';
+    const urgency =
+      isHighGrade && vol >= 26
+        ? 'Urgent Resection Planning'
+        : isHighGrade || vol >= 17.5
+        ? 'Neurosurgical Review'
+        : vol >= 11.0
+        ? 'Oncologic Follow-Up'
+        : 'Routine Surveillance';
+    const triageLevel = classifyTriageLevel(urgency, vol, whoGrade);
+    const analysisStatus = idx > 25 && idx % 9 === 0 ? 'Pending' : 'Analyzed';
+    const month = idx < 90 ? 10 : idx < 190 ? 9 : 8;
+    const day = Math.max(1, 28 - (idx % 27));
+
+    list.push({
+      patient_id: pid,
+      mrn: `MRN-${1000 + i}0-LGG`,
+      name: `${CLIENT_NAMES_POOL[idx % CLIENT_NAMES_POOL.length]} (${pid})`,
+      age,
+      sex,
+      who_grade: whoGrade,
+      histology,
+      biomarkers: {
+        idh1: isHighGrade ? 'Wildtype' : 'Mutant',
+        codel_1p19q: histology.includes('Oligodendroglioma') ? 'Codeleted' : 'Intact',
+        mgmt: isHighGrade ? 'Unmethylated' : 'Methylated',
+      },
+      location: CLIENT_LOCATIONS[idx % CLIENT_LOCATIONS.length],
+      volume_cm3: vol,
+      recist_mm: recist,
+      dsc,
+      hd95_mm: hd95,
+      ece,
+      urgency,
+      status: analysisStatus === 'Pending' ? 'Pending Sign-Off' : 'Verified',
+      triage_level: triageLevel,
+      scan_date: `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+      sequence: CLIENT_SEQUENCES[idx % CLIENT_SEQUENCES.length],
+      analysis_status: analysisStatus,
+      seed: 1000 + idx,
+    });
+  }
+  return list;
+}
+
+export const DEFAULT_COHORT: PatientRecord[] = buildFullClientDirectory();
 
 export const DEFAULT_ABLATION: AblationModelRow[] = [
   {
@@ -1312,6 +1519,83 @@ export const neuroApi = {
       return data.patients;
     } catch {
       return DEFAULT_COHORT;
+    }
+  },
+
+  async getPatientsDirectory(
+    query: PatientsDirectoryQuery = {}
+  ): Promise<PatientsDirectoryResponse> {
+    const search = (query.search || '').trim();
+    const status = query.status || 'ALL';
+    const gender = query.gender || 'ALL';
+    const ageBracket = query.age_bracket || 'ALL';
+    const page = Math.max(1, query.page || 1);
+    const pageSize = Math.max(1, query.page_size || 15);
+
+    try {
+      const params = new URLSearchParams({
+        search,
+        status,
+        gender,
+        age_bracket: ageBracket,
+        page: String(page),
+        page_size: String(pageSize),
+      });
+      const res = await fetch(`/api/patients?${params.toString()}`);
+      if (!res.ok) throw new Error('Backend offline');
+      const data = await res.json();
+      if (data && typeof data.total === 'number' && Array.isArray(data.patients)) {
+        return data;
+      }
+      throw new Error('Fallback to client directory');
+    } catch {
+      const all = DEFAULT_COHORT;
+      const summaryCounts = {
+        total: all.length,
+        urgent: all.filter((p) => p.triage_level === 'Urgent').length,
+        priority: all.filter((p) => p.triage_level === 'Priority').length,
+        followup: all.filter((p) => p.triage_level === 'Follow-up').length,
+        routine: all.filter((p) => p.triage_level === 'Routine').length,
+      };
+
+      const q = search.toLowerCase();
+      const filtered = all.filter((p) => {
+        if (q) {
+          const hay = `${p.patient_id} ${p.mrn} ${p.name} ${p.histology} ${p.location} ${p.urgency}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        if (status.toUpperCase() !== 'ALL') {
+          if (status.toLowerCase() === 'pending') {
+            if (p.analysis_status !== 'Pending') return false;
+          } else if ((p.triage_level || '').toLowerCase() !== status.toLowerCase()) {
+            return false;
+          }
+        }
+        if (gender.toUpperCase() !== 'ALL' && p.sex.toLowerCase() !== gender.toLowerCase()) {
+          return false;
+        }
+        if (ageBracket.toUpperCase() !== 'ALL') {
+          if (ageBracket === 'UNDER_35' && p.age >= 35) return false;
+          if (ageBracket === '35_50' && (p.age < 35 || p.age > 50)) return false;
+          if (ageBracket === 'OVER_50' && p.age <= 50) return false;
+        }
+        return true;
+      });
+
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(page, totalPages);
+      const start = (safePage - 1) * pageSize;
+
+      return {
+        status: 'success',
+        total,
+        page: safePage,
+        page_size: pageSize,
+        total_pages: totalPages,
+        summary_counts: summaryCounts,
+        patients: filtered.slice(start, start + pageSize),
+      };
     }
   },
 

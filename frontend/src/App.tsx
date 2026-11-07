@@ -96,8 +96,24 @@ export default function App() {
           }
         />
         <Route
+          path="/case/:patientId"
+          element={
+            <ReportsPage
+              activePatient={activePatient}
+              study={study}
+              onSelectPatient={setActivePatientId}
+            />
+          }
+        />
+        <Route
           path="/reports"
-          element={<ReportsPage activePatient={activePatient} study={study} />}
+          element={
+            <ReportsPage
+              activePatient={activePatient}
+              study={study}
+              onSelectPatient={setActivePatientId}
+            />
+          }
         />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
