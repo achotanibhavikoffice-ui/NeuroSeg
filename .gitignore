@@ -4,4 +4,4 @@ frontend/dist/
 __pycache__/
 *.pyc
 .venv/
-outputs/*.pt
+outputs/5_neuroseg_v3_full_bihemispheric_sdm_best.pt
