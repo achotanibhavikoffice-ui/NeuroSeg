@@ -232,24 +232,29 @@ export function UncertaintyLabPage({ activePatient, study }: UncertaintyLabPageP
           </div>
 
           {/* Visual Calibration Bar Chart across 10 Confidence Bins */}
-          <div className="grid grid-cols-10 items-end gap-2 h-52 pt-6 px-3 border-b border-slate-200 dark:border-[#2b3a45]">
+          <div
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(10, minmax(0, 1fr))' }}
+            className="items-end gap-2.5 h-52 pt-6 pb-2 px-3 border-b border-slate-200 dark:border-[#293c4f]"
+          >
             {CALIBRATION_BINS.map((b) => (
-              <div key={b.bin} className="flex flex-col items-center justify-end h-full gap-1">
-                <div className="flex items-end gap-1 w-full h-full justify-center">
+              <div key={b.bin} className="flex flex-col items-center justify-end h-full">
+                <div className="flex items-end gap-1.5 w-full flex-1 justify-center">
                   {/* Vanilla U-Net (Overconfident gap) */}
                   <div
-                    style={{ height: `${Math.round(b.unetAcc * 100)}%` }}
+                    style={{ height: `${Math.round(b.unetAcc * 135)}px`, backgroundColor: '#f87171' }}
                     title={`Vanilla U-Net Empirical Accuracy: ${(b.unetAcc * 100).toFixed(1)}% (Expected: ${(b.expected * 100).toFixed(1)}%)`}
-                    className="w-2.5 rounded-t bg-rose-400/75"
+                    className="w-3 rounded-t opacity-80"
                   />
                   {/* NeuroSeg v3.0 (Closely tracks diagonal ideal calibration) */}
                   <div
-                    style={{ height: `${Math.round(b.neurosegAcc * 100)}%` }}
+                    style={{ height: `${Math.round(b.neurosegAcc * 135)}px`, backgroundColor: '#087f72' }}
                     title={`NeuroSeg v3.0 Empirical Accuracy: ${(b.neurosegAcc * 100).toFixed(1)}% (Expected: ${(b.expected * 100).toFixed(1)}%)`}
-                    className="w-2.5 rounded-t bg-[#087f72] dark:bg-[#5bd0a8]"
+                    className="w-3 rounded-t"
                   />
                 </div>
-                <span className="font-mono text-[9px] text-slate-400">{b.bin.split('–')[0]}</span>
+                <span className="mt-2 font-mono text-[10px] font-semibold text-slate-500 dark:text-slate-300">
+                  {b.bin.split('–')[0]}
+                </span>
               </div>
             ))}
           </div>
