@@ -18,6 +18,7 @@ import {
   RotateCcw,
   Search,
   ShieldAlert,
+  UploadCloud,
   Users,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -184,6 +185,14 @@ export function DashboardPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            className="button button-dark"
+            onClick={() => navigate('/workstation?upload=1')}
+          >
+            <UploadCloud size={15} />
+            <span>Upload Custom MRI (.TIF)</span>
+          </button>
           <button
             type="button"
             className="button button-dark"

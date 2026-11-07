@@ -1,18 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Activity,
+  CheckCircle2,
+  Cpu,
   Crosshair,
   Eye,
   FileText,
+  FileUp,
   Layers,
   Pause,
   Play,
+  RefreshCw,
   RotateCcw,
   ShieldAlert,
   Sparkles,
+  UploadCloud,
+  X,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import type { PatientRecord, StudyStackResponse } from '../api';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  neuroApi,
+  type CustomUploadInferenceResponse,
+  type PatientRecord,
+  type SliceData,
+  type StudyStackResponse,
+} from '../api';
 
 interface WorkstationPageProps {
   activePatient: PatientRecord;
@@ -21,6 +33,13 @@ interface WorkstationPageProps {
   onSliceChange: (idx: number) => void;
 }
 
+const SAMPLE_TIFF_SCANS = [
+  { id: 1, label: 'TCGA_LGG_slice_0001.tif', desc: 'Left Frontal Glioma (WHO Gr 2)' },
+  { id: 14, label: 'TCGA_LGG_slice_0014.tif', desc: 'Insular Infiltrative Mass' },
+  { id: 28, label: 'TCGA_LGG_slice_0028.tif', desc: 'Right Temporal Oligodendroglioma' },
+  { id: 42, label: 'TCGA_LGG_slice_0042.tif', desc: 'Parietal High-Burden Astrocytoma' },
+];
+
 export function WorkstationPage({
   activePatient,
   study,
@@ -28,6 +47,9 @@ export function WorkstationPage({
   onSliceChange,
 }: WorkstationPageProps) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [playing, setPlaying] = useState(false);
   const [showPredMask, setShowPredMask] = useState(true);
   const [showGtContour, setShowGtContour] = useState(true);
@@ -43,17 +65,55 @@ export function WorkstationPage({
 
   const [cursorCoords, setCursorCoords] = useState<{ x: number; y: number }>({ x: 96, y: 114 });
 
-  const slices = study?.slices || [];
-  const activeSliceData = slices[currentSlice] || slices[0];
-  const activeBreakdown = study?.volumetry.slice_breakdown[currentSlice];
+  // Live Custom MRI Upload & Instant Inference State
+  const [showUploadPanel, setShowUploadPanel] = useState<boolean>(true);
+  const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
+  const [uploadLoading, setUploadLoading] = useState<boolean>(false);
+  const [mcPasses, setMcPasses] = useState<number>(8);
+  const [customResult, setCustomResult] = useState<CustomUploadInferenceResponse | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!playing || slices.length === 0) return;
+    if (searchParams.get('upload') === '1') {
+      setShowUploadPanel(true);
+    }
+  }, [searchParams]);
+
+  const slices = study?.slices || [];
+  const stackSliceData = slices[currentSlice] || slices[0];
+  const activeBreakdown = study?.volumetry.slice_breakdown[currentSlice];
+
+  // If a custom scan is active, project it directly into the 6-Layer PACS Viewport
+  const activeSliceData: SliceData | undefined = customResult
+    ? {
+        slice_index: 1,
+        flair_image_b64: customResult.flair_image_b64,
+        gt_mask_b64: customResult.gt_mask_b64,
+        pred_mask_b64: customResult.pred_mask_b64,
+        gradcam_b64: customResult.gradcam_b64,
+        uncertainty_b64: customResult.uncertainty_b64,
+        asymmetry_b64: customResult.asymmetry_b64,
+        tumor_pixel_count: customResult.metrics.tumor_pixel_count,
+        confidence: customResult.metrics.confidence,
+        epistemic_entropy: customResult.metrics.epistemic_entropy,
+        hd95_mm: customResult.metrics.hd95_mm,
+      }
+    : stackSliceData;
+
+  const displayAreaMm2 = customResult
+    ? customResult.metrics.planar_area_mm2
+    : activeBreakdown?.area_mm2 || 0;
+  const displayFeretMm = customResult
+    ? customResult.metrics.recist_diameter_mm
+    : activeBreakdown?.max_diameter_mm || 0;
+
+  useEffect(() => {
+    if (!playing || slices.length === 0 || customResult) return;
     const timer = window.setInterval(() => {
       onSliceChange((currentSlice + 1) % slices.length);
     }, 380);
     return () => window.clearInterval(timer);
-  }, [playing, currentSlice, slices.length, onSliceChange]);
+  }, [playing, currentSlice, slices.length, onSliceChange, customResult]);
 
   const resetPreset = () => {
     setShowPredMask(true);
@@ -68,6 +128,44 @@ export function WorkstationPage({
     setBrightness(1.05);
   };
 
+  const handleFileSelected = (file: File) => {
+    setUploadError(null);
+    setUploadLoading(true);
+    setPlaying(false);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const b64 = typeof reader.result === 'string' ? reader.result : '';
+        const res = await neuroApi.segmentUploadedScan(b64, file.name, mcPasses);
+        setCustomResult(res);
+      } catch {
+        setUploadError('Could not process MRI image file. Please try a .tif, .png, or .jpg scan.');
+      } finally {
+        setUploadLoading(false);
+      }
+    };
+    reader.onerror = () => {
+      setUploadError('Failed to read selected file from disk.');
+      setUploadLoading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRunSampleTiff = async (scanId: number) => {
+    setUploadError(null);
+    setUploadLoading(true);
+    setPlaying(false);
+    try {
+      const res = await neuroApi.runSampleTiffScan(scanId, mcPasses);
+      setCustomResult(res);
+    } catch {
+      setUploadError('Failed to load sample TCGA-LGG .tif scan.');
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   return (
     <div>
       {/* Header Row */}
@@ -77,22 +175,33 @@ export function WorkstationPage({
             <span className="status-dot" />
             <span>INTERACTIVE PACS DIAGNOSTIC WORKSTATION v3.0</span>
             <span className="eyebrow-divider">•</span>
-            <span>{activePatient.patient_id}</span>
+            <span>{customResult ? `CUSTOM SCAN: ${customResult.filename}` : activePatient.patient_id}</span>
             <span className="eyebrow-divider">•</span>
             <span>{study?.sequence || 'Axial T2-FLAIR 3.0T'}</span>
           </div>
-          <h1>6-Layer Volumetric MRI & Explainability Inspector</h1>
+          <h1>6-Layer Volumetric MRI & Live Inference Dropzone</h1>
           <p>
-            Scroll axial planes or toggle Bayesian Epistemic Uncertainty Halo (σ²), Grad-CAM++, and Bi-Hemispheric
-            Contralateral Asymmetry overlays in real time.
+            Upload any custom Brain MRI slice (<code>.tif</code>, <code>.png</code>, <code>.jpg</code>) for live PyTorch{' '}
+            <code>AttentionUNet</code> segmentation, or scroll the 16-slice 3D patient stack below.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={() => setShowUploadPanel((v) => !v)}
+          >
+            <UploadCloud size={14} />
+            <span>{showUploadPanel ? 'Hide Custom MRI Dropzone' : 'Upload Custom MRI Scan'}</span>
+          </button>
           <button
             type="button"
             className="button button-dark"
-            onClick={() => setPlaying((p) => !p)}
+            onClick={() => {
+              setCustomResult(null);
+              setPlaying((p) => !p);
+            }}
           >
             {playing ? <Pause size={14} /> : <Play size={14} />}
             <span>{playing ? 'Pause Cine Loop' : 'Play 3D Cine Loop'}</span>
@@ -103,14 +212,317 @@ export function WorkstationPage({
           </button>
           <button
             type="button"
-            className="button button-primary"
-            onClick={() => navigate('/reports')}
+            className="button button-dark"
+            onClick={() => navigate(`/case/${encodeURIComponent(activePatient.patient_id)}`)}
           >
             <FileText size={14} />
-            <span>Synthesize Report</span>
+            <span>Case Report</span>
           </button>
         </div>
       </div>
+
+      {/* UPGRADE #5: Live Custom Brain MRI Upload & Instant PyTorch Inference Dropzone */}
+      {showUploadPanel && (
+        <div className="panel p-6 mb-6 border-2 border-[#087f72]/25 dark:border-[#5bd0a8]/30">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="section-kicker !mb-0">
+                  LIVE PYTORCH INFERENCE DROPZONE (POST /api/segment-upload)
+                </span>
+                <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 font-mono text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                  FP16 AMP • AttentionUNet + Grad-CAM++ + MC-Dropout
+                </span>
+              </div>
+              <h2 className="text-base font-extrabold text-slate-900 dark:text-white mt-1">
+                Drag & Drop Any Brain MRI Slice (.TIF / .PNG / .JPG) or Test a Raw TCGA-LGG .TIF Scan
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="font-semibold text-slate-600 dark:text-slate-300">MC-Dropout Passes:</span>
+                {[4, 8, 12].map((passes) => (
+                  <button
+                    key={passes}
+                    type="button"
+                    onClick={() => setMcPasses(passes)}
+                    className={`rounded-md px-2.5 py-1 font-mono text-xs font-bold transition ${
+                      mcPasses === passes
+                        ? 'bg-[#087f72] text-white'
+                        : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-[#2b3a45] dark:bg-[#142029] dark:text-slate-200'
+                    }`}
+                  >
+                    T={passes}
+                  </button>
+                ))}
+              </div>
+
+              {customResult && (
+                <button
+                  type="button"
+                  onClick={() => setCustomResult(null)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-300 hover:bg-rose-500/20"
+                >
+                  <X size={13} />
+                  <span>Exit Custom Scan Mode</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+            {/* Dropzone Box (5 cols) */}
+            <div className="lg:col-span-5 flex flex-col justify-between gap-3">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDraggingOver(true);
+                }}
+                onDragLeave={() => setIsDraggingOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDraggingOver(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleFileSelected(file);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition ${
+                  isDraggingOver
+                    ? 'border-[#087f72] bg-[#087f72]/10 dark:border-[#5bd0a8]'
+                    : 'border-slate-300 bg-slate-50/70 hover:border-[#087f72] hover:bg-slate-100/70 dark:border-[#2b3a45] dark:bg-[#111b22] dark:hover:border-[#5bd0a8]'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".tif,.tiff,.png,.jpg,.jpeg,.webp,image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelected(file);
+                    e.target.value = '';
+                  }}
+                />
+                <div className="mb-2.5 flex h-11 w-11 items-center justify-center rounded-full bg-[#087f72]/15 text-[#087f72] dark:text-[#5bd0a8]">
+                  {uploadLoading ? <RefreshCw size={20} className="animate-spin" /> : <FileUp size={20} />}
+                </div>
+                <div className="text-sm font-bold text-slate-900 dark:text-white">
+                  {uploadLoading
+                    ? 'Running PyTorch AttentionUNet + Grad-CAM++ + MC-Dropout...'
+                    : 'Drop Brain MRI Slice Here or Click to Browse'}
+                </div>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Supports raw <code>.tif / .tiff</code> (from <code>data/tcga_lgg_scans/</code>), <code>.png</code>,{' '}
+                  <code>.jpg</code>, and <code>.webp</code>
+                </p>
+              </div>
+
+              {/* 4 One-Click Raw .TIF Test Scans */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <span>Or Instant-Load a Real Paired .TIF Scan from Disk:</span>
+                  <span className="font-mono text-[#087f72] dark:text-[#5bd0a8]">data/tcga_lgg_scans/</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {SAMPLE_TIFF_SCANS.map((sc) => {
+                    const isActive = customResult?.filename === sc.label;
+                    return (
+                      <button
+                        key={sc.id}
+                        type="button"
+                        disabled={uploadLoading}
+                        onClick={() => handleRunSampleTiff(sc.id)}
+                        className={`flex flex-col items-start rounded-lg border p-2.5 text-left transition ${
+                          isActive
+                            ? 'border-[#087f72] bg-[#087f72]/10 dark:border-[#5bd0a8] dark:bg-[#5bd0a8]/10'
+                            : 'border-slate-200 bg-white hover:border-[#087f72]/50 dark:border-[#2b3a45] dark:bg-[#142029]'
+                        }`}
+                      >
+                        <div className="flex w-full items-center justify-between">
+                          <span className="font-mono text-[11px] font-extrabold text-[#087f72] dark:text-[#5bd0a8]">
+                            {sc.label}
+                          </span>
+                          <Cpu size={12} className="text-slate-400" />
+                        </div>
+                        <span className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1">
+                          {sc.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {uploadError && (
+                <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs font-semibold text-rose-600 dark:text-rose-300">
+                  {uploadError}
+                </div>
+              )}
+            </div>
+
+            {/* Live 5-Channel Output Strip & Quantitative Metrics (7 cols) */}
+            <div className="lg:col-span-7 flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-[#2b3a45] dark:bg-[#0f1820]">
+              {customResult ? (
+                <div className="flex flex-col gap-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5 dark:border-[#24323d]">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-emerald-500" />
+                      <span className="font-mono text-xs font-extrabold text-slate-900 dark:text-white">
+                        {customResult.filename}
+                      </span>
+                      <span className="rounded bg-[#087f72]/15 px-2 py-0.5 font-mono text-[10px] font-bold text-[#087f72] dark:text-[#5bd0a8]">
+                        {customResult.resolution}
+                      </span>
+                    </div>
+                    <div className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      Inference Latency: {customResult.latency_ms} ms (T={customResult.mc_passes} MC passes)
+                    </div>
+                  </div>
+
+                  {/* 5-Panel Explainability Strip */}
+                  <div className="grid grid-cols-5 gap-2.5">
+                    <div className="overflow-hidden rounded-lg border border-slate-800 bg-[#05080d]">
+                      <div className="relative aspect-square">
+                        <img
+                          src={`data:image/png;base64,${customResult.flair_image_b64}`}
+                          alt="Uploaded FLAIR"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <div className="p-1.5 text-center font-mono text-[10px] font-bold text-slate-200 bg-[#0b1118]">
+                        1. Input FLAIR
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-lg border border-slate-800 bg-[#05080d]">
+                      <div className="relative aspect-square">
+                        <img
+                          src={`data:image/png;base64,${customResult.flair_image_b64}`}
+                          alt="Base"
+                          className="h-full w-full object-contain opacity-80"
+                        />
+                        <img
+                          src={`data:image/png;base64,${customResult.pred_mask_b64}`}
+                          alt="Predicted Mask"
+                          style={{ mixBlendMode: 'screen' }}
+                          className="absolute inset-0 h-full w-full object-contain opacity-85"
+                        />
+                      </div>
+                      <div className="p-1.5 text-center font-mono text-[10px] font-bold text-rose-300 bg-[#0b1118]">
+                        2. Tumor Mask
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-lg border border-slate-800 bg-[#05080d]">
+                      <div className="relative aspect-square">
+                        <img
+                          src={`data:image/png;base64,${customResult.flair_image_b64}`}
+                          alt="Base"
+                          className="h-full w-full object-contain opacity-65"
+                        />
+                        <img
+                          src={`data:image/png;base64,${customResult.gradcam_b64}`}
+                          alt="Grad-CAM++"
+                          style={{ mixBlendMode: 'screen' }}
+                          className="absolute inset-0 h-full w-full object-contain opacity-75"
+                        />
+                      </div>
+                      <div className="p-1.5 text-center font-mono text-[10px] font-bold text-cyan-300 bg-[#0b1118]">
+                        3. Grad-CAM++
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-lg border border-slate-800 bg-[#05080d]">
+                      <div className="relative aspect-square">
+                        <img
+                          src={`data:image/png;base64,${customResult.flair_image_b64}`}
+                          alt="Base"
+                          className="h-full w-full object-contain opacity-60"
+                        />
+                        <img
+                          src={`data:image/png;base64,${customResult.uncertainty_b64}`}
+                          alt="Epistemic Halo"
+                          style={{ mixBlendMode: 'screen' }}
+                          className="absolute inset-0 h-full w-full object-contain opacity-90"
+                        />
+                      </div>
+                      <div className="p-1.5 text-center font-mono text-[10px] font-bold text-amber-300 bg-[#0b1118]">
+                        4. Epistemic σ²
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-lg border border-slate-800 bg-[#05080d]">
+                      <div className="relative aspect-square">
+                        <img
+                          src={`data:image/png;base64,${customResult.asymmetry_b64}`}
+                          alt="Contralateral Asymmetry"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <div className="p-1.5 text-center font-mono text-[10px] font-bold text-emerald-300 bg-[#0b1118]">
+                        5. Asymmetry
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 6 Quantitative Metrics Row */}
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                    <div className="rounded-lg border border-slate-200 bg-white p-2 dark:border-[#24323d] dark:bg-[#142029]">
+                      <div className="text-[10px] font-bold uppercase text-slate-400">Planar Area</div>
+                      <div className="font-mono text-xs font-extrabold text-[#087f72] dark:text-[#5bd0a8]">
+                        {customResult.metrics.planar_area_mm2} mm²
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-white p-2 dark:border-[#24323d] dark:bg-[#142029]">
+                      <div className="text-[10px] font-bold uppercase text-slate-400">RECIST Feret</div>
+                      <div className="font-mono text-xs font-extrabold text-slate-900 dark:text-white">
+                        {customResult.metrics.recist_diameter_mm} mm
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-white p-2 dark:border-[#24323d] dark:bg-[#142029]">
+                      <div className="text-[10px] font-bold uppercase text-slate-400">Est. Volume</div>
+                      <div className="font-mono text-xs font-extrabold text-slate-900 dark:text-white">
+                        {customResult.metrics.estimated_volume_cm3} cm³
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-white p-2 dark:border-[#24323d] dark:bg-[#142029]">
+                      <div className="text-[10px] font-bold uppercase text-slate-400">Dice (DSC)</div>
+                      <div className="font-mono text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+                        {(customResult.metrics.dsc * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-white p-2 dark:border-[#24323d] dark:bg-[#142029]">
+                      <div className="text-[10px] font-bold uppercase text-slate-400">HD95 Margin</div>
+                      <div className="font-mono text-xs font-extrabold text-slate-900 dark:text-white">
+                        {customResult.metrics.hd95_mm} mm
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-white p-2 dark:border-[#24323d] dark:bg-[#142029]">
+                      <div className="text-[10px] font-bold uppercase text-slate-400">Confidence</div>
+                      <div className="font-mono text-xs font-extrabold text-amber-600 dark:text-amber-400">
+                        {(customResult.metrics.confidence * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+                  <Sparkles size={28} className="text-[#087f72] dark:text-[#5bd0a8] mb-2" />
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Ready for Live Single-Slice Brain MRI Inference
+                  </h3>
+                  <p className="mt-1 max-w-md text-xs text-slate-500 dark:text-slate-400">
+                    Click any of the <strong>4 TCGA-LGG .tif sample buttons</strong> on the left or drag-and-drop your
+                    own MRI image to execute live segmentation, Grad-CAM++, and Bayesian uncertainty estimation and
+                    project it into the 6-Layer PACS Viewport below.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3-Column PACS Workstation Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -280,18 +692,22 @@ export function WorkstationPage({
             <div className="flex items-center gap-2.5">
               <Eye size={16} className="text-[#087f72]" />
               <span className="font-bold text-sm">
-                Axial Plane #{currentSlice + 1} / {slices.length || 16}
+                {customResult
+                  ? `Custom Scan: ${customResult.filename}`
+                  : `Axial Plane #${currentSlice + 1} / ${slices.length || 16}`}
               </span>
-              {activeSliceData?.tumor_pixel_count > 0 ? (
+              {(activeSliceData?.tumor_pixel_count || 0) > 0 ? (
                 <span className="change-pill change-down">
-                  LESION ACTIVE ({activeBreakdown?.area_mm2} mm²)
+                  LESION ACTIVE ({displayAreaMm2} mm²)
                 </span>
               ) : (
                 <span className="change-pill change-up">PARENCHYMA CLEAR</span>
               )}
             </div>
             <div className="font-mono text-xs text-slate-500 dark:text-slate-300">
-              Z-Coord: {((currentSlice - 8) * 4.0).toFixed(1)} mm • HD95: {activeSliceData?.hd95_mm || 0} mm
+              {customResult
+                ? `Latency: ${customResult.latency_ms} ms • HD95: ${activeSliceData?.hd95_mm || 0} mm`
+                : `Z-Coord: ${((currentSlice - 8) * 4.0).toFixed(1)} mm • HD95: ${activeSliceData?.hd95_mm || 0} mm`}
             </div>
           </div>
 
@@ -299,7 +715,7 @@ export function WorkstationPage({
           <div
             onWheel={(e) => {
               e.preventDefault();
-              if (slices.length === 0) return;
+              if (slices.length === 0 || customResult) return;
               const delta = e.deltaY > 0 ? 1 : -1;
               const next = Math.max(0, Math.min(slices.length - 1, currentSlice + delta));
               onSliceChange(next);
@@ -379,7 +795,11 @@ export function WorkstationPage({
               style={{ color: '#6ee7b7' }}
               className="pointer-events-none absolute left-3.5 top-3.5 font-mono text-[11px] font-semibold leading-relaxed drop-shadow"
             >
-              <div style={{ color: '#6ee7b7' }}>{activePatient.patient_id} ({activePatient.sex}, {activePatient.age}Y)</div>
+              <div style={{ color: '#6ee7b7' }}>
+                {customResult
+                  ? `UPLOAD: ${customResult.filename}`
+                  : `${activePatient.patient_id} (${activePatient.sex}, ${activePatient.age}Y)`}
+              </div>
               <div style={{ color: '#a7f3d0' }}>SEQ: 3D-FLAIR + BI-HEMISPHERIC ATTN</div>
               <div style={{ color: '#cbd5e1' }}>FOV: 240mm • Matrix: 256×256</div>
             </div>
@@ -388,9 +808,15 @@ export function WorkstationPage({
               style={{ color: '#67e8f9' }}
               className="pointer-events-none absolute right-3.5 top-3.5 text-right font-mono text-[11px] font-semibold leading-relaxed drop-shadow"
             >
-              <div style={{ color: '#67e8f9' }}>SLICE #{currentSlice + 1} / {slices.length || 16}</div>
-              <div style={{ color: '#e2e8f0' }}>CONF: {((activeSliceData?.confidence || 0.94) * 100).toFixed(1)}%</div>
-              <div style={{ color: '#fbbf24' }}>H(p): {activeSliceData?.epistemic_entropy || 0.012} bits</div>
+              <div style={{ color: '#67e8f9' }}>
+                {customResult ? 'CUSTOM SLICE MODE' : `SLICE #${currentSlice + 1} / ${slices.length || 16}`}
+              </div>
+              <div style={{ color: '#e2e8f0' }}>
+                CONF: {((activeSliceData?.confidence || 0.94) * 100).toFixed(1)}%
+              </div>
+              <div style={{ color: '#fbbf24' }}>
+                H(p): {activeSliceData?.epistemic_entropy || 0.012} bits
+              </div>
             </div>
 
             <div
@@ -399,7 +825,8 @@ export function WorkstationPage({
             >
               <Crosshair size={13} color="#5bd0a8" />
               <span style={{ color: '#f1f5f9' }}>
-                Voxel ({cursorCoords.x}, {cursorCoords.y}, {currentSlice + 1}) • Stereotactic ({((cursorCoords.x - 128) * 0.94).toFixed(1)}mm, {((cursorCoords.y - 128) * 0.94).toFixed(1)}mm)
+                Voxel ({cursorCoords.x}, {cursorCoords.y}, {customResult ? 1 : currentSlice + 1}) • Stereotactic (
+                {((cursorCoords.x - 128) * 0.94).toFixed(1)}mm, {((cursorCoords.y - 128) * 0.94).toFixed(1)}mm)
               </span>
             </div>
           </div>
@@ -409,7 +836,9 @@ export function WorkstationPage({
             <div className="flex justify-between text-xs text-slate-500 dark:text-slate-300 mb-1.5">
               <span>Superior (Cranial Vertex)</span>
               <strong className="font-mono text-[#087f72] dark:text-[#5bd0a8]">
-                Scroll Wheel or Drag Axial Plane ({currentSlice + 1} / {slices.length || 16})
+                {customResult
+                  ? 'Click Any Filmstrip Thumbnail to Return to 16-Slice Stack'
+                  : `Scroll Wheel or Drag Axial Plane (${currentSlice + 1} / ${slices.length || 16})`}
               </strong>
               <span>Inferior (Skull Base)</span>
             </div>
@@ -418,7 +847,10 @@ export function WorkstationPage({
               min={0}
               max={Math.max(0, slices.length - 1)}
               value={currentSlice}
-              onChange={(e) => onSliceChange(parseInt(e.target.value, 10))}
+              onChange={(e) => {
+                setCustomResult(null);
+                onSliceChange(parseInt(e.target.value, 10));
+              }}
               className="w-full accent-[#087f72]"
             />
           </div>
@@ -428,21 +860,21 @@ export function WorkstationPage({
         <div className="panel p-6 lg:col-span-3 flex flex-col gap-5">
           <div>
             <span className="section-kicker">QUANTITATIVE SLICE TELEMETRY</span>
-            <h2 className="text-sm font-bold">Plane #{currentSlice + 1} Biomarkers</h2>
+            <h2 className="text-sm font-bold">
+              {customResult ? 'Uploaded Scan Biomarkers' : `Plane #${currentSlice + 1} Biomarkers`}
+            </h2>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 text-xs">
             <div className="rounded-lg border border-slate-200 p-2.5 dark:border-[#2b3a45]">
               <div className="text-[10px] text-slate-400 uppercase font-bold">2D Planar Area</div>
               <div className="font-mono text-base font-extrabold mt-0.5 text-[#087f72] dark:text-[#5bd0a8]">
-                {activeBreakdown?.area_mm2 || 0} mm²
+                {displayAreaMm2} mm²
               </div>
             </div>
             <div className="rounded-lg border border-slate-200 p-2.5 dark:border-[#2b3a45]">
               <div className="text-[10px] text-slate-400 uppercase font-bold">In-Plane Feret</div>
-              <div className="font-mono text-base font-extrabold mt-0.5">
-                {activeBreakdown?.max_diameter_mm || 0} mm
-              </div>
+              <div className="font-mono text-base font-extrabold mt-0.5">{displayFeretMm} mm</div>
             </div>
             <div className="rounded-lg border border-slate-200 p-2.5 dark:border-[#2b3a45]">
               <div className="text-[10px] text-slate-400 uppercase font-bold">Boundary HD95</div>
@@ -467,13 +899,16 @@ export function WorkstationPage({
 
             <div className="grid grid-cols-4 gap-1.5">
               {slices.map((s, idx) => {
-                const isCurr = idx === currentSlice;
+                const isCurr = !customResult && idx === currentSlice;
                 const hasLesion = s.tumor_pixel_count > 0;
                 return (
                   <button
                     key={s.slice_index}
                     type="button"
-                    onClick={() => onSliceChange(idx)}
+                    onClick={() => {
+                      setCustomResult(null);
+                      onSliceChange(idx);
+                    }}
                     className={`relative aspect-square overflow-hidden rounded border transition ${
                       isCurr
                         ? 'border-2 border-[#087f72] ring-2 ring-[#087f72]/30 dark:border-[#5bd0a8]'
