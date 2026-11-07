@@ -6,7 +6,7 @@ into a structured, professional hospital-grade neuro-radiology consultation repo
 """
 
 import os
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 import urllib.request
 import json
 
@@ -38,8 +38,8 @@ class RadiologyReportGenerator:
         patient_age: int,
         patient_gender: str,
         indication: str,
-        volumetry_data: Dict[str, any],
-    ) -> Dict[str, any]:
+        volumetry_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
         volume_cm3 = volumetry_data.get("total_volume_cm3", 0.0)
         recist_mm = volumetry_data.get("recist_longest_diameter_mm", 0.0)
         category = volumetry_data.get("clinical_category", "Indeterminate")

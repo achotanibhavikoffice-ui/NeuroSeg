@@ -8,7 +8,7 @@ Calculates:
 """
 
 import math
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 
@@ -63,7 +63,7 @@ class VolumetricTumorQuantifier:
 
     def compute_volume_stack(
         self, slice_masks: List[np.ndarray], confidence_scores: Optional[List[float]] = None
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Computes 3D Volumetric burden across an ordered sequence of contiguous axial slices.
         """
