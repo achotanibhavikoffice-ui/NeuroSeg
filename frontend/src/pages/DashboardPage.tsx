@@ -1,26 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Activity,
+  AlertTriangle,
   ArrowUpRight,
   Brain,
+  Calendar,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
   Database,
   Droplets,
   FileText,
+  Filter,
   FlaskConical,
   Layers,
+  RotateCcw,
   Search,
   ShieldAlert,
-  Sparkles,
   Users,
-  Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   PATIENT_DEFAULT_BLOOD_PANELS,
   computeClientHematologyAnalysis,
+  neuroApi,
   type AblationModelRow,
   type PatientRecord,
+  type PatientsDirectoryResponse,
   type StudyStackResponse,
 } from '../api';
 
@@ -34,7 +41,6 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({
-  patients,
   activePatient,
   study,
   ablation,
@@ -42,8 +48,71 @@ export function DashboardPage({
   onJumpToSlice,
 }: DashboardPageProps) {
   const navigate = useNavigate();
-  const [patientSearch, setPatientSearch] = useState('');
-  const [gradeFilter, setGradeFilter] = useState<'ALL' | 'GRADE2' | 'GRADE3' | 'ALERT'>('ALL');
+
+  // Search & Filter State
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [triageFilter, setTriageFilter] = useState<string>('ALL');
+  const [genderFilter, setGenderFilter] = useState<string>('ALL');
+  const [ageBracketFilter, setAgeBracketFilter] = useState<string>('ALL');
+  const [page, setPage] = useState<number>(1);
+  const pageSize = 12;
+
+  const [dirData, setDirData] = useState<PatientsDirectoryResponse | null>(null);
+  const [loadingDirectory, setLoadingDirectory] = useState<boolean>(true);
+
+  // Debounce search input by 220ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setPage(1);
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Fetch filtered & paginated directory from API / fallback
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingDirectory(true);
+    neuroApi
+      .getPatientsDirectory({
+        search: debouncedSearch,
+        status: triageFilter,
+        gender: genderFilter,
+        age_bracket: ageBracketFilter,
+        page,
+        page_size: pageSize,
+      })
+      .then((res) => {
+        if (!cancelled) {
+          setDirData(res);
+          setLoadingDirectory(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, triageFilter, genderFilter, ageBracketFilter, page]);
+
+  const hasActiveFilters =
+    searchInput.trim() !== '' ||
+    triageFilter !== 'ALL' ||
+    genderFilter !== 'ALL' ||
+    ageBracketFilter !== 'ALL';
+
+  const handleClearFilters = () => {
+    setSearchInput('');
+    setDebouncedSearch('');
+    setTriageFilter('ALL');
+    setGenderFilter('ALL');
+    setAgeBracketFilter('ALL');
+    setPage(1);
+  };
+
+  const handleOpenCaseAndReport = (patientId: string) => {
+    onSelectPatient(patientId);
+    navigate(`/case/${encodeURIComponent(patientId)}`);
+  };
 
   const breakdown = study?.volumetry.slice_breakdown || [];
   const maxArea = Math.max(1, ...breakdown.map((b) => b.area_mm2));
@@ -53,54 +122,64 @@ export function DashboardPage({
       PATIENT_DEFAULT_BLOOD_PANELS['TCGA-CS-4941']
   );
 
-  const filteredPatients = patients.filter((pat) => {
-    const q = patientSearch.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      pat.patient_id.toLowerCase().includes(q) ||
-      pat.mrn.toLowerCase().includes(q) ||
-      pat.histology.toLowerCase().includes(q) ||
-      pat.location.toLowerCase().includes(q) ||
-      pat.urgency.toLowerCase().includes(q);
+  const summaryCounts = dirData?.summary_counts || {
+    total: 300,
+    urgent: 68,
+    priority: 94,
+    followup: 72,
+    routine: 66,
+  };
 
-    if (!matchesSearch) return false;
-
-    if (gradeFilter === 'GRADE2') return pat.who_grade.includes('Grade 2');
-    if (gradeFilter === 'GRADE3') return pat.who_grade.includes('Grade 3');
-    if (gradeFilter === 'ALERT') {
-      const patHema = computeClientHematologyAnalysis(
-        pat,
-        PATIENT_DEFAULT_BLOOD_PANELS[pat.patient_id] ||
-          PATIENT_DEFAULT_BLOOD_PANELS['TCGA-CS-4941']
-      );
+  const renderTriageBadge = (level?: string, urgencyText?: string) => {
+    const t = level || 'Priority';
+    if (t === 'Urgent') {
       return (
-        patHema.surgical_clearance.tier !== 'optimal' ||
-        patHema.chemo_safety.status !== 'optimal' ||
-        pat.urgency.toLowerCase().includes('urgent')
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-100 px-2.5 py-0.5 text-[11px] font-extrabold text-rose-800 dark:border-rose-800 dark:bg-rose-950/80 dark:text-rose-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-600 dark:bg-rose-400" />
+          Urgent • {urgencyText || 'Immediate Resection'}
+        </span>
       );
     }
-    return true;
-  });
+    if (t === 'Priority') {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-0.5 text-[11px] font-extrabold text-amber-900 dark:border-amber-800 dark:bg-amber-950/80 dark:text-amber-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:bg-amber-400" />
+          Priority • {urgencyText || 'Neurosurgical Review'}
+        </span>
+      );
+    }
+    if (t === 'Follow-up') {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-100 px-2.5 py-0.5 text-[11px] font-extrabold text-sky-900 dark:border-sky-800 dark:bg-sky-950/80 dark:text-sky-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-sky-600 dark:bg-sky-400" />
+          Follow-up • {urgencyText || 'Oncologic Restaging'}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#b5e2d8] bg-[#e6f4f1] px-2.5 py-0.5 text-[11px] font-extrabold text-[#087f72] dark:border-[#25574e] dark:bg-[#16342f] dark:text-[#5bd0a8]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#087f72] dark:bg-[#5bd0a8]" />
+        Routine • {urgencyText || 'Surveillance'}
+      </span>
+    );
+  };
 
   return (
     <div>
-      {/* Greeting & Quick Action Row */}
+      {/* Header Row */}
       <div className="greeting-row">
         <div>
           <div className="eyebrow">
             <span className="status-dot" />
-            <span>NEURO-ONCOLOGY CLINICAL COMMAND CENTER</span>
+            <span>PATIENT DIRECTORY & CLINICAL TRIAGE DASHBOARD</span>
             <span className="eyebrow-divider">•</span>
-            <span>ACTIVE PATIENT: {activePatient.patient_id}</span>
-            <span className="eyebrow-divider">•</span>
-            <span>12,000 MULTIMODAL SCANS TRAINED (9,000 TRAIN / 1,500 VAL / 1,500 TEST)</span>
+            <span>300 PATIENTS INDEXED FROM 12,000 MULTIMODAL SCANS</span>
           </div>
-          <h1>
-            {activePatient.patient_id}: {activePatient.histology} — {activePatient.location}
-          </h1>
+          <h1>Clinical Neuro-Oncology Patient Directory & Triage Queue</h1>
           <p>
-            Select any patient from the Clinical Cohort Directory below to inspect their 16-slice 3D Brain MRI
-            segmentation, Bayesian epistemic uncertainty halo, and 12-biomarker Neuro-Hematology blood fusion.
+            Search, filter, and triage patients across our 12,000-scan TCGA-LGG / BraTS multimodal cohort. Click any
+            patient row or <strong>"View Case & Report"</strong> to launch their 3D MRI segmentation, volumetry, and
+            autonomous consultation report.
           </p>
         </div>
 
@@ -111,341 +190,489 @@ export function DashboardPage({
             onClick={() => navigate('/hematology')}
           >
             <Droplets size={15} />
-            <span>Blood + MRI Fusion</span>
+            <span>Blood + MRI Fusion Lab</span>
           </button>
           <button
             type="button"
             className="button button-dark"
-            onClick={() => navigate('/reports')}
+            onClick={() => navigate('/workstation')}
           >
-            <FileText size={15} />
-            <span>ACR/RSNA AI Report</span>
+            <Layers size={15} />
+            <span>3D PACS Workstation</span>
           </button>
           <button
             type="button"
             className="button button-primary"
-            onClick={() => navigate('/workstation')}
+            onClick={() => handleOpenCaseAndReport(activePatient.patient_id)}
           >
-            <Layers size={15} />
-            <span>Open 3D PACS Workstation</span>
+            <FileText size={15} />
+            <span>Open Active Case ({activePatient.patient_id})</span>
           </button>
         </div>
       </div>
 
-      {/* PROMINENT PATIENT DIRECTORY & SELECTOR ON FIRST DASHBOARD */}
-      <div className="panel p-6 mb-6 border-2 border-[#087f72]/25">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-slate-200 pb-4 dark:border-[#263646]">
-          <div>
-            <div className="flex items-center gap-2">
-              <Users size={16} className="text-[#087f72] dark:text-[#5bd0a8]" />
-              <span className="section-kicker !mb-0">
-                INTERACTIVE PATIENT COHORT SELECTOR • CLICK ANY PATIENT TO LOAD 3D MRI + BLOOD STUDY
-              </span>
-            </div>
-            <h2 className="text-lg font-extrabold mt-1">
-              TCGA-LGG Patient Study Queue ({filteredPatients.length} of {patients.length} Active Patients Shown)
-            </h2>
+      {/* 4 Triage Acuity Overview Stat Cards */}
+      <div className="stat-grid">
+        <div
+          onClick={() => {
+            setTriageFilter('ALL');
+            setPage(1);
+          }}
+          className="stat-card stat-main cursor-pointer transition hover:opacity-95"
+        >
+          <div className="stat-label">
+            <span>TOTAL COHORT DIRECTORY</span>
+            <Users size={15} />
           </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Search Input */}
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-[#293c4f] dark:bg-[#141f2b]">
-              <Search size={14} className="text-[#087f72]" />
-              <input
-                type="text"
-                value={patientSearch}
-                onChange={(e) => setPatientSearch(e.target.value)}
-                placeholder="Search ID, brain lobe, histology..."
-                className="w-48 bg-transparent text-xs text-slate-800 outline-none dark:text-slate-100"
-              />
-            </div>
-
-            {/* Filter Pills */}
-            {(
-              [
-                { id: 'ALL', label: `All (${patients.length})` },
-                { id: 'GRADE2', label: 'WHO Grade 2' },
-                { id: 'GRADE3', label: 'WHO Grade 3' },
-                { id: 'ALERT', label: 'Surgical / Chemo Alert' },
-              ] as const
-            ).map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setGradeFilter(tab.id)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                  gradeFilter === tab.id
-                    ? 'bg-[#087f72] text-white'
-                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-[#293c4f] dark:bg-[#141f2b] dark:text-slate-200'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="stat-value">
+            {summaryCounts.total} <span>Patients (12,000 Scans)</span>
+          </div>
+          <div className="stat-foot">
+            <span className="change-pill change-up">9,000 Train / 1,500 Val / 1,500 Test</span>
+            <span>Click to view all</span>
           </div>
         </div>
 
-        {/* Scrollable / Interactive Patient Directory Table */}
-        <div className="mt-4 overflow-x-auto max-h-[370px] overflow-y-auto pr-1">
+        <div
+          onClick={() => {
+            setTriageFilter('Urgent');
+            setPage(1);
+          }}
+          className="stat-card cursor-pointer transition hover:border-rose-400"
+        >
+          <div className="stat-label">
+            <span>URGENT ACUITY TRIAGE</span>
+            <AlertTriangle size={15} className="text-rose-500" />
+          </div>
+          <div className="stat-value text-rose-600 dark:text-rose-400">
+            {summaryCounts.urgent} <span>Urgent Cases</span>
+          </div>
+          <div className="stat-foot">
+            <span className="rounded bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800 dark:bg-rose-950/70 dark:text-rose-300">
+              High Burden / Grade 3
+            </span>
+            <span>Immediate Surgical Review</span>
+          </div>
+        </div>
+
+        <div
+          onClick={() => {
+            setTriageFilter('Priority');
+            setPage(1);
+          }}
+          className="stat-card cursor-pointer transition hover:border-amber-400"
+        >
+          <div className="stat-label">
+            <span>PRIORITY NEUROSURGICAL QUEUE</span>
+            <Activity size={15} className="text-amber-500" />
+          </div>
+          <div className="stat-value text-amber-600 dark:text-amber-400">
+            {summaryCounts.priority} <span>Priority Cases</span>
+          </div>
+          <div className="stat-foot">
+            <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
+              Eloquent Cortex Proximity
+            </span>
+            <span>Pre-Op Workup</span>
+          </div>
+        </div>
+
+        <div
+          onClick={() => {
+            setTriageFilter('Routine');
+            setPage(1);
+          }}
+          className="stat-card cursor-pointer transition hover:border-[#087f72]"
+        >
+          <div className="stat-label">
+            <span>FOLLOW-UP & ROUTINE SURVEILLANCE</span>
+            <CheckCircle2 size={15} className="text-[#087f72]" />
+          </div>
+          <div className="stat-value positive-text">
+            {summaryCounts.followup + summaryCounts.routine} <span>Stable Studies</span>
+          </div>
+          <div className="stat-foot">
+            <span className="change-pill change-up">
+              {summaryCounts.followup} Follow-Up • {summaryCounts.routine} Routine
+            </span>
+            <span>RANO Restaging</span>
+          </div>
+        </div>
+      </div>
+
+      {/* PRIMARY PATIENT DIRECTORY & CLINICAL TRIAGE TABLE PANEL */}
+      <div className="panel p-6 mb-6 border-2 border-[#087f72]/25">
+        {/* Top Row: Search Bar + Filter Chips + Demographic Dropdowns + Clear Filters */}
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 dark:border-[#263646]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Users size={16} className="text-[#087f72] dark:text-[#5bd0a8]" />
+                <span className="section-kicker !mb-0">
+                  DYNAMIC PATIENT DIRECTORY (`data/tcga_lgg_multimodal_12000.csv`)
+                </span>
+              </div>
+              <h2 className="mt-1 text-lg font-extrabold">
+                Clinical Study Triage & Case Selection Queue
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-300">
+              <span>
+                Showing <strong>{dirData?.patients.length || 0}</strong> of{' '}
+                <strong>{dirData?.total || 0}</strong> matching patients
+              </span>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="ml-2 inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 font-sans text-xs font-bold text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200"
+                >
+                  <RotateCcw size={12} />
+                  <span>Clear Filters</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Search & Filters Controls Bar */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 items-center">
+            {/* Debounced Real-Time Search Bar (5 Cols) */}
+            <div className="lg:col-span-5 flex items-center gap-2.5 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 focus-within:border-[#087f72] focus-within:bg-white dark:border-[#2d3f52] dark:bg-[#141f2b]">
+              <Search size={16} className="text-[#087f72] shrink-0" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search by Patient ID (e.g. TCGA-CS-4941), MRN, Patient Name, or Lobe..."
+                className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none dark:text-slate-100"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput('')}
+                  className="text-[11px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Triage Status Filter Chips (4 Cols) */}
+            <div className="lg:col-span-4 flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  { id: 'ALL', label: 'All' },
+                  { id: 'Urgent', label: 'Urgent' },
+                  { id: 'Priority', label: 'Priority' },
+                  { id: 'Follow-up', label: 'Follow-up' },
+                  { id: 'Routine', label: 'Routine' },
+                  { id: 'Pending', label: 'Pending' },
+                ] as const
+              ).map((chip) => {
+                const active = triageFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => {
+                      setTriageFilter(chip.id);
+                      setPage(1);
+                    }}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
+                      active
+                        ? 'bg-[#087f72] text-white shadow-sm'
+                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-[#2d3f52] dark:bg-[#141f2b] dark:text-slate-200'
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Gender & Age Bracket Dropdowns (3 Cols) */}
+            <div className="lg:col-span-3 flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 dark:border-[#2d3f52] dark:bg-[#141f2b]">
+                <Filter size={12} className="text-[#087f72] shrink-0" />
+                <select
+                  value={genderFilter}
+                  onChange={(e) => {
+                    setGenderFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  aria-label="Filter by Gender"
+                  className="w-full bg-transparent text-xs font-bold text-slate-700 outline-none dark:bg-[#141f2b] dark:text-slate-200"
+                >
+                  <option value="ALL">All Genders</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 dark:border-[#2d3f52] dark:bg-[#141f2b]">
+                <select
+                  value={ageBracketFilter}
+                  onChange={(e) => {
+                    setAgeBracketFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  aria-label="Filter by Age Bracket"
+                  className="w-full bg-transparent text-xs font-bold text-slate-700 outline-none dark:bg-[#141f2b] dark:text-slate-200"
+                >
+                  <option value="ALL">All Ages</option>
+                  <option value="UNDER_35">Under 35 yrs</option>
+                  <option value="35_50">35 – 50 yrs</option>
+                  <option value="OVER_50">Over 50 yrs</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Clinical Patient Directory Table */}
+        <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:border-[#263646] dark:text-slate-300">
-                <th className="py-2.5 px-3">Patient ID & Demographics</th>
-                <th className="py-2.5 px-3">Histology & Anatomical Lobe</th>
-                <th className="py-2.5 px-3">3D Volume / RECIST</th>
-                <th className="py-2.5 px-3">DSC / HD95</th>
-                <th className="py-2.5 px-3">Blood NLR & Surgical / TMZ Gate</th>
-                <th className="py-2.5 px-3 text-right">Select & Inspect</th>
+                <th className="py-3 px-3">Patient MRN / ID & Name</th>
+                <th className="py-3 px-3">Demographics & Histology</th>
+                <th className="py-3 px-3">Scan Date / Sequence</th>
+                <th className="py-3 px-3">Triage Status / Acuity Level</th>
+                <th className="py-3 px-3">Lesion Volume / RECIST</th>
+                <th className="py-3 px-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs dark:divide-[#243444]">
-              {filteredPatients.map((pat) => {
-                const isSelected = pat.patient_id === activePatient.patient_id;
-                const patHema = computeClientHematologyAnalysis(
-                  pat,
-                  PATIENT_DEFAULT_BLOOD_PANELS[pat.patient_id] ||
-                    PATIENT_DEFAULT_BLOOD_PANELS['TCGA-CS-4941']
-                );
-                const hasAlert =
-                  patHema.surgical_clearance.tier !== 'optimal' ||
-                  patHema.chemo_safety.status !== 'optimal';
-
-                return (
-                  <tr
-                    key={pat.patient_id}
-                    onClick={() => onSelectPatient(pat.patient_id)}
-                    className={`cursor-pointer transition ${
-                      isSelected
-                        ? 'bg-[#e6f4f1]/80 dark:bg-[#1c2e3d]'
-                        : 'hover:bg-slate-50 dark:hover:bg-[#162330]'
-                    }`}
-                  >
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-extrabold text-white ${
-                            isSelected ? 'bg-[#087f72]' : 'bg-slate-600 dark:bg-slate-700'
-                          }`}
-                        >
-                          {pat.patient_id.split('-')[1]}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5 font-extrabold text-slate-900 dark:text-slate-100">
-                            <span>{pat.patient_id}</span>
-                            {isSelected && (
-                              <span className="rounded bg-[#087f72] px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase text-white">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                          <div className="font-mono text-[11px] text-slate-500 dark:text-slate-300">
-                            {pat.mrn} • {pat.age}Y {pat.sex}
-                          </div>
-                        </div>
-                      </div>
+              {loadingDirectory ? (
+                // Shimmer Loading Skeletons
+                Array.from({ length: 6 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-4 px-3">
+                      <div className="h-4 w-36 rounded bg-slate-200 dark:bg-slate-700" />
+                      <div className="mt-1.5 h-3 w-24 rounded bg-slate-100 dark:bg-slate-800" />
                     </td>
-
-                    <td className="py-3 px-3">
-                      <div className="font-bold text-slate-800 dark:text-slate-100">{pat.histology}</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-300">
-                        {pat.location} • <span className="font-semibold">{pat.who_grade}</span> • IDH1:{' '}
-                        {pat.biomarkers.idh1}
-                      </div>
+                    <td className="py-4 px-3">
+                      <div className="h-4 w-44 rounded bg-slate-200 dark:bg-slate-700" />
+                      <div className="mt-1.5 h-3 w-32 rounded bg-slate-100 dark:bg-slate-800" />
                     </td>
-
-                    <td className="py-3 px-3 font-mono">
-                      <div className="font-extrabold text-slate-900 dark:text-slate-100">
-                        {pat.volume_cm3} cm³
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-300">
-                        RECIST: {pat.recist_mm} mm
-                      </div>
+                    <td className="py-4 px-3">
+                      <div className="h-4 w-32 rounded bg-slate-200 dark:bg-slate-700" />
                     </td>
-
-                    <td className="py-3 px-3 font-mono">
-                      <div className="font-extrabold text-[#087f72] dark:text-[#5bd0a8]">
-                        {(pat.dsc * 100).toFixed(1)}% DSC
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-300">
-                        HD95: {pat.hd95_mm} mm
-                      </div>
+                    <td className="py-4 px-3">
+                      <div className="h-6 w-28 rounded-full bg-slate-200 dark:bg-slate-700" />
                     </td>
-
-                    <td className="py-3 px-3">
-                      <div className="font-mono text-[11px] font-bold text-slate-800 dark:text-slate-100">
-                        NLR {patHema.indices.nlr} • sGFAP {patHema.panel.serum_gfap_pg_ml} pg/mL
-                      </div>
-                      <span
-                        className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
-                          hasAlert
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300'
-                            : 'bg-[#e6f4f1] text-[#087f72] dark:bg-[#16342f] dark:text-[#5bd0a8]'
-                        }`}
-                      >
-                        {patHema.chemo_safety.status !== 'optimal'
-                          ? patHema.chemo_safety.ctcae_grade
-                          : patHema.surgical_clearance.status}
-                      </span>
+                    <td className="py-4 px-3">
+                      <div className="h-4 w-24 rounded bg-slate-200 dark:bg-slate-700" />
                     </td>
-
-                    <td className="py-3 px-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectPatient(pat.patient_id);
-                          }}
-                          className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition ${
-                            isSelected
-                              ? 'bg-[#087f72] text-white'
-                              : 'border border-slate-200 bg-white text-slate-700 hover:border-[#087f72] dark:border-[#2d3f52] dark:bg-[#141f2b] dark:text-slate-200'
-                          }`}
-                        >
-                          {isSelected ? 'Selected' : 'Select'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectPatient(pat.patient_id);
-                            navigate('/workstation');
-                          }}
-                          className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-bold text-[#087f72] hover:bg-[#e6f4f1] dark:border-[#2d3f52] dark:bg-[#1c2b3a] dark:text-[#5bd0a8]"
-                          title="Open 3D MRI PACS Workstation"
-                        >
-                          3D PACS ↗
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectPatient(pat.patient_id);
-                            navigate('/hematology');
-                          }}
-                          className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:border-[#087f72] dark:border-[#2d3f52] dark:bg-[#1c2b3a] dark:text-slate-200"
-                          title="Open Neuro-Hematology Blood Lab"
-                        >
-                          Blood ↗
-                        </button>
-                      </div>
+                    <td className="py-4 px-3 text-right">
+                      <div className="ml-auto h-8 w-36 rounded-lg bg-slate-200 dark:bg-slate-700" />
                     </td>
                   </tr>
-                );
-              })}
+                ))
+              ) : dirData && dirData.patients.length > 0 ? (
+                dirData.patients.map((pat) => {
+                  const isSelected = pat.patient_id === activePatient.patient_id;
+                  const isPending = pat.analysis_status === 'Pending';
+
+                  return (
+                    <tr
+                      key={pat.patient_id}
+                      onClick={() => handleOpenCaseAndReport(pat.patient_id)}
+                      className={`cursor-pointer transition ${
+                        isSelected
+                          ? 'bg-[#e6f4f1]/80 dark:bg-[#1c2e3d]'
+                          : 'hover:bg-slate-50 dark:hover:bg-[#162330]'
+                      }`}
+                    >
+                      {/* 1. Patient MRN / ID & Name */}
+                      <td className="py-3.5 px-3">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-extrabold text-white ${
+                              isSelected ? 'bg-[#087f72]' : 'bg-slate-600 dark:bg-slate-700'
+                            }`}
+                          >
+                            {pat.patient_id.split('-')[1]}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="rounded bg-[#e6f4f1] px-2 py-0.5 font-mono text-xs font-extrabold text-[#087f72] dark:bg-[#16342f] dark:text-[#5bd0a8]">
+                                {pat.patient_id}
+                              </span>
+                              <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-300">
+                                {pat.mrn}
+                              </span>
+                            </div>
+                            <div className="mt-1 font-bold text-slate-900 dark:text-slate-100">
+                              {pat.name}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* 2. Demographics & Histology */}
+                      <td className="py-3.5 px-3">
+                        <div className="font-extrabold text-slate-900 dark:text-slate-100">
+                          {pat.age} yrs • {pat.sex} •{' '}
+                          <span className="text-[#087f72] dark:text-[#5bd0a8]">{pat.who_grade}</span>
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">
+                          {pat.histology} ({pat.location})
+                        </div>
+                      </td>
+
+                      {/* 3. Scan Date / Sequence */}
+                      <td className="py-3.5 px-3">
+                        <div className="inline-flex items-center gap-1.5 font-mono font-bold text-slate-800 dark:text-slate-100">
+                          <Calendar size={12} className="text-[#087f72]" />
+                          <span>{pat.scan_date || '2026-10-24'}</span>
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">
+                          {pat.sequence || 'Axial T2-FLAIR + Post-Gd T1 (3.0T)'}
+                        </div>
+                      </td>
+
+                      {/* 4. Triage Status / Acuity Level */}
+                      <td className="py-3.5 px-3">
+                        {renderTriageBadge(pat.triage_level, pat.urgency)}
+                      </td>
+
+                      {/* 5. Lesion Volume / RECIST Summary */}
+                      <td className="py-3.5 px-3 font-mono">
+                        {isPending ? (
+                          <div className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            <Clock size={12} />
+                            <span>Pending Quantitative Sign-Off</span>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-extrabold text-slate-900 dark:text-slate-100">
+                              {pat.volume_cm3} cm³{' '}
+                              <span className="text-[11px] font-normal text-slate-500 dark:text-slate-300">
+                                ({pat.recist_mm} mm RECIST)
+                              </span>
+                            </div>
+                            <div className="text-[11px] font-bold text-[#087f72] dark:text-[#5bd0a8]">
+                              DSC: {(pat.dsc * 100).toFixed(1)}% • HD95: {pat.hd95_mm} mm
+                            </div>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 6. Action: "View Case & Report" */}
+                      <td className="py-3.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenCaseAndReport(pat.patient_id);
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#087f72] px-3 py-1.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#06645a]"
+                          >
+                            <FileText size={13} />
+                            <span>View Case & Report</span>
+                            <ArrowUpRight size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectPatient(pat.patient_id);
+                              navigate('/workstation');
+                            }}
+                            className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:border-[#087f72] dark:border-[#2d3f52] dark:bg-[#1c2b3a] dark:text-slate-200"
+                            title="Open 3D MRI PACS Workstation"
+                          >
+                            PACS
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                // Empty State ("No patients found matching your search")
+                <tr>
+                  <td colSpan={6} className="py-12 text-center">
+                    <div className="mx-auto flex max-w-md flex-col items-center gap-2">
+                      <Search size={28} className="text-slate-400" />
+                      <strong className="text-sm font-extrabold text-slate-800 dark:text-slate-100">
+                        No patients found matching your search
+                      </strong>
+                      <p className="text-xs text-slate-500 dark:text-slate-300">
+                        No records in the 300-patient TCGA-LGG directory matched "{searchInput}" with the selected
+                        triage and demographic filters.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleClearFilters}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#087f72] px-4 py-2 text-xs font-bold text-white"
+                      >
+                        <RotateCcw size={13} />
+                        <span>Reset All Search & Filter Criteria</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        {dirData && dirData.total_pages > 1 && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 text-xs dark:border-[#263646]">
+            <div className="font-mono text-slate-500 dark:text-slate-300">
+              Page <strong>{dirData.page}</strong> of <strong>{dirData.total_pages}</strong> • Total Indexed Cohort:{' '}
+              <strong>{dirData.total}</strong> Patients (`data/tcga_lgg_multimodal_12000.csv`)
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-bold text-slate-700 disabled:opacity-40 dark:border-[#2d3f52] dark:bg-[#141f2b] dark:text-slate-200"
+              >
+                <ChevronLeft size={14} />
+                <span>Previous</span>
+              </button>
+
+              {Array.from({ length: Math.min(5, dirData.total_pages) }).map((_, i) => {
+                const pNum = i + 1;
+                return (
+                  <button
+                    key={pNum}
+                    type="button"
+                    onClick={() => setPage(pNum)}
+                    className={`h-8 w-8 rounded-lg font-mono text-xs font-bold transition ${
+                      dirData.page === pNum
+                        ? 'bg-[#087f72] text-white'
+                        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-[#2d3f52] dark:bg-[#141f2b] dark:text-slate-200'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                disabled={page >= dirData.total_pages}
+                onClick={() => setPage((p) => Math.min(dirData.total_pages, p + 1))}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-bold text-slate-700 disabled:opacity-40 dark:border-[#2d3f52] dark:bg-[#141f2b] dark:text-slate-200"
+              >
+                <span>Next</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 4 KPI Stat Cards for Currently Selected Patient */}
-      <div className="stat-grid">
-        <div className="stat-card stat-main">
-          <div className="stat-label">
-            <span>3D VOLUMETRIC TUMOR BURDEN ({activePatient.patient_id})</span>
-            <Brain size={15} />
-          </div>
-          <div className="stat-value">
-            {activePatient.volume_cm3} <span>cm³ ({Math.round(activePatient.volume_cm3 * 1000)} mm³)</span>
-          </div>
-          <div className="stat-foot">
-            <span className="change-pill change-up">RECIST: {activePatient.recist_mm} mm</span>
-            <span>Peak at Axial Slice #{study?.volumetry.peak_lesion_slice_index || 9}</span>
-          </div>
-          <svg className="stat-spark" viewBox="0 0 100 40" fill="none">
-            <path
-              d="M2 35 C20 34, 32 28, 48 12 C62 2, 75 8, 98 26"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">
-            <span>DICE SIMILARITY (DSC)</span>
-            <Sparkles size={15} />
-          </div>
-          <div className="stat-value positive-text">
-            {(activePatient.dsc * 100).toFixed(1)}% <span>({activePatient.dsc.toFixed(3)})</span>
-          </div>
-          <div className="stat-foot">
-            <span className="change-pill change-up">+8.74% vs U-Net</span>
-            <span>IoU: 85.12%</span>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">
-            <span>95% HAUSDORFF (HD95)</span>
-            <Activity size={15} />
-          </div>
-          <div className="stat-value">
-            {activePatient.hd95_mm} <span>mm surface err</span>
-          </div>
-          <div className="stat-foot">
-            <span className="change-pill change-up">-5.22 mm via SDM Loss</span>
-            <span>Sub-voxel margin</span>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">
-            <span>CALIBRATION ERROR (ECE)</span>
-            <ShieldAlert size={15} />
-          </div>
-          <div className="stat-value positive-text">
-            {activePatient.ece} <span>ECE (T=8 MC)</span>
-          </div>
-          <div className="stat-foot">
-            <span className="change-pill change-up">98.1% Reliability</span>
-            <button type="button" className="text-action" onClick={() => navigate('/uncertainty')}>
-              <span>Audit</span>
-              <ArrowUpRight size={12} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Live Engine & 12,000-Sample Training Telemetry Strip */}
-      <div className="market-strip">
-        <div className="market-strip-label">
-          <span className="live-pulse" />
-          <span>PYTORCH TRAINING CORPUS</span>
-        </div>
-
-        <div className="index-quote">
-          <span>TOTAL DATASET</span>
-          <strong>12,000 SCANS + BLOOD</strong>
-          <small className="positive-text">300 Multi-Center Patients</small>
-        </div>
-
-        <div className="index-quote">
-          <span>TRAIN / VAL / TEST SPLIT</span>
-          <strong>9,000 / 1,500 / 1,500</strong>
-          <small className="positive-text">75% / 12.5% / 12.5% Held-Out</small>
-        </div>
-
-        <div className="index-quote">
-          <span>MULTIMODAL FUSION AUC</span>
-          <strong>0.964 ROC-AUC</strong>
-          <small className="positive-text">Cross-Modal Gated GMU</small>
-        </div>
-
-        <div className="index-quote">
-          <span>SLICE INFERENCE</span>
-          <strong>{study?.inference_ms_per_slice || 13.4} ms / slice</strong>
-          <small className="positive-text">FP16 Mixed Precision</small>
-        </div>
-
-        <div className="market-asof">
-          <Zap size={13} />
-          <span>Checkpoints Active (.pt)</span>
-        </div>
-      </div>
-
-      {/* Main 2-Column Dashboard Grid */}
+      {/* Main 2-Column Preview Grid for Active Selected Patient */}
       <div className="dashboard-grid">
         {/* LEFT PRIMARY COLUMN */}
         <div className="primary-column">
@@ -454,16 +681,16 @@ export function DashboardPage({
             <div className="panel-heading">
               <div>
                 <span className="section-kicker">
-                  3D AXIAL Z-AXIS VOLUMETRIC RECONSTRUCTION ({activePatient.patient_id})
+                  ACTIVE STUDY PREVIEW: {activePatient.patient_id} ({activePatient.name})
                 </span>
-                <h2>Slice-by-Slice Cross-Sectional Tumor Burden (mm²) — Click Any Slice to Inspect in PACS</h2>
+                <h2>Slice-by-Slice Cross-Sectional Tumor Burden (mm²) — Click Any Slice to Open 3D PACS</h2>
               </div>
               <button
                 type="button"
                 className="text-action"
-                onClick={() => navigate('/workstation')}
+                onClick={() => handleOpenCaseAndReport(activePatient.patient_id)}
               >
-                <span>Open Full 3D Viewer</span>
+                <span>Open Full Case & Report</span>
                 <ArrowUpRight size={14} />
               </button>
             </div>
@@ -573,13 +800,6 @@ export function DashboardPage({
                 </div>
               </div>
             </div>
-
-            <div className="dark-code-box mt-4 space-y-1">
-              <div className="font-bold">Saved Artifacts & Trained Checkpoints:</div>
-              <div>• Dataset CSV: data/tcga_lgg_multimodal_12000.csv (12,000 rows × 29 clinical/MRI/blood features)</div>
-              <div>• MRI Checkpoint: outputs/5_neuroseg_v3_full_bihemispheric_sdm_best.pt</div>
-              <div>• Blood+MRI Checkpoint: outputs/multimodal_fusion_v3_best.pt</div>
-            </div>
           </div>
         </div>
 
@@ -632,28 +852,24 @@ export function DashboardPage({
                   {hemaSummary.surgical_clearance.status}
                 </strong>
               </div>
-              <div className="flex justify-between border-b border-slate-100 pb-2 dark:border-[#2b3a45]">
-                <span className="text-slate-400">Uncertainty Halo (Mean H)</span>
-                <strong className="font-mono text-amber-500">0.118 bits (Calibrated)</strong>
-              </div>
             </div>
 
             <div className="mt-4 flex flex-col gap-2">
               <button
                 type="button"
                 className="button trade-submit trade-buy"
-                onClick={() => navigate('/workstation')}
+                onClick={() => handleOpenCaseAndReport(activePatient.patient_id)}
               >
-                <Layers size={15} />
-                <span>Inspect 6-Layer PACS Stack</span>
+                <FileText size={15} />
+                <span>View Case & Autonomous Report</span>
               </button>
               <button
                 type="button"
                 className="button button-dark w-full justify-center"
-                onClick={() => navigate('/hematology')}
+                onClick={() => navigate('/workstation')}
               >
-                <Droplets size={15} />
-                <span>Open Neuro-Hematology Blood Lab</span>
+                <Layers size={15} />
+                <span>Inspect 6-Layer PACS Stack</span>
               </button>
             </div>
           </div>

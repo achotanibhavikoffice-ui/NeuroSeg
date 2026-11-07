@@ -29,14 +29,14 @@ export interface AppLayoutProps {
 }
 
 const navItems = [
-  { label: 'Clinical Overview', path: '/dashboard', Icon: LayoutDashboard },
+  { label: 'Patient Directory', path: '/dashboard', Icon: LayoutDashboard },
   { label: 'PACS Workstation', path: '/workstation', Icon: Layers, badge: '3D' },
   { label: 'Neuro-Hematology Lab', path: '/hematology', Icon: Droplets, isNew: true },
   { label: 'Uncertainty & ECE Lab', path: '/uncertainty', Icon: ShieldAlert, isNew: true },
   { label: '5-Way Ablation Lab', path: '/ablation', Icon: FlaskConical, isNew: true },
   { label: 'Longitudinal RANO', path: '/longitudinal', Icon: GitCompare, isNew: true },
   { label: 'TCGA Cohort Explorer', path: '/cohort', Icon: Users },
-  { label: 'Radiology Report AI', path: '/reports', Icon: FileText },
+  { label: 'Case & Report AI', path: '/reports', Icon: FileText },
 ];
 
 export function AppLayout({
@@ -77,15 +77,20 @@ export function AppLayout({
     setDarkMode((prev) => !prev);
   };
 
-  const currentNavItem =
-    navItems.find((item) => location.pathname.startsWith(item.path)) || navItems[0];
+  const currentNavItem = location.pathname.startsWith('/case/')
+    ? navItems[navItems.length - 1]
+    : navItems.find((item) => location.pathname.startsWith(item.path)) || navItems[0];
 
-  const filteredPatients = patients.filter(
-    (p) =>
-      p.patient_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.histology.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPatients = patients
+    .filter(
+      (p) =>
+        p.patient_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.mrn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.histology.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.location.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .slice(0, 20);
 
   return (
     <div className="app-shell">
@@ -122,11 +127,11 @@ export function AppLayout({
           </button>
 
           {patientMenuOpen && (
-            <div className="absolute left-0 right-0 top-[68px] z-30 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-[#293c4f] dark:bg-[#141f2b]">
+            <div className="absolute left-0 right-0 top-[68px] z-30 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-[#293c4f] dark:bg-[#141f2b]">
               <div className="px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-300">
-                Switch TCGA-LGG Study
+                Switch TCGA-LGG Study ({patients.length} Indexed)
               </div>
-              {patients.map((pat) => (
+              {patients.slice(0, 25).map((pat) => (
                 <button
                   key={pat.patient_id}
                   type="button"
@@ -155,7 +160,9 @@ export function AppLayout({
 
         <nav className="side-nav" aria-label="Main Navigation">
           {navItems.map(({ label, path, Icon, isNew, badge }) => {
-            const active = location.pathname.startsWith(path);
+            const active =
+              location.pathname.startsWith(path) ||
+              (path === '/reports' && location.pathname.startsWith('/case/'));
             return (
               <button
                 key={path}
