@@ -11,7 +11,7 @@ import base64
 import io
 import os
 import sys
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from PIL import Image
@@ -69,11 +69,11 @@ def get_model() -> AttentionUNet:
 
 def array_to_base64_png(arr: np.ndarray, colormap: Optional[str] = None) -> str:
     """Converts a 2D float or uint8 numpy array to a base64 encoded PNG string."""
-    import matplotlib.cm as cm
+    import matplotlib
 
     if colormap:
         norm_arr = (arr - arr.min()) / (arr.max() - arr.min() + 1e-6)
-        cmap = cm.get_cmap(colormap)
+        cmap = matplotlib.colormaps[colormap]
         colored = (cmap(norm_arr)[:, :, :3] * 255).astype(np.uint8)
         img = Image.fromarray(colored)
     else:
@@ -166,7 +166,7 @@ class ReportRequest(BaseModel):
     patient_age: int = 47
     patient_gender: str = "Male"
     indication: str = "New-onset focal neurological deficit with severe headaches and focal seizures."
-    volumetry: Dict[str, any]
+    volumetry: Dict[str, Any]
 
 
 @app.post("/api/generate-report")
