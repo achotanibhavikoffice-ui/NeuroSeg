@@ -201,21 +201,21 @@ export function AblationLabPage({ ablation }: AblationLabPageProps) {
       )}
 
       {/* 5 Deep Research Upgrades Mathematical Breakdown */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {UPGRADE_CARDS.map((u) => (
-          <div key={u.id} className="panel p-5 flex flex-col gap-2.5">
+          <div key={u.id} className="panel p-6 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="rounded bg-[#e7f3ef] px-2 py-0.5 font-mono text-[10px] font-extrabold text-[#087f72] dark:bg-[#1d2b36] dark:text-[#5bd0a8]">
+              <span className="rounded-md bg-[#e6f4f1] px-2.5 py-1 font-mono text-[11px] font-extrabold text-[#087f72] dark:bg-[#1c2b3a] dark:text-[#5bd0a8]">
                 {u.id}
               </span>
-              <span className="font-mono text-[11px] text-slate-400">{u.codeRef}</span>
+              <span className="font-mono text-xs text-slate-500 dark:text-slate-300">{u.codeRef}</span>
             </div>
-            <h3 className="text-sm font-bold">{u.title}</h3>
-            <div className="text-xs italic text-slate-400">Literature: {u.citation}</div>
-            <div className="rounded-md bg-slate-900 p-2.5 font-mono text-[11px] text-emerald-300 border border-slate-800 overflow-x-auto">
-              {u.formula}
+            <h3 className="text-base font-bold">{u.title}</h3>
+            <div className="text-xs italic text-slate-500 dark:text-slate-300">Literature: {u.citation}</div>
+            <div className="dark-code-box text-xs overflow-x-auto">
+              <span className="code-kicker">{u.formula}</span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-300">{u.impact}</p>
+            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{u.impact}</p>
           </div>
         ))}
       </div>

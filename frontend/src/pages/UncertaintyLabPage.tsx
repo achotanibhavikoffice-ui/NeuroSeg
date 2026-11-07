@@ -126,17 +126,17 @@ export function UncertaintyLabPage({ activePatient, study }: UncertaintyLabPageP
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left 5 Cols: What-If Controls & Mathematical Formulation */}
-        <div className="panel p-5 lg:col-span-5 flex flex-col gap-4">
+        <div className="panel p-6 lg:col-span-5 flex flex-col gap-5">
           <div>
             <span className="section-kicker">INTERACTIVE BAYESIAN HYPERPARAMETERS</span>
             <h2 className="text-base font-bold">What-If Decision Threshold & MC-Dropout Simulator</h2>
           </div>
 
           <div className="space-y-4 text-xs">
-            <div className="rounded-lg border border-slate-200 p-3.5 dark:border-[#2b3a45]">
-              <div className="flex justify-between mb-1.5">
+            <div className="rounded-xl border border-slate-200 p-4 dark:border-[#293c4f]">
+              <div className="flex justify-between mb-2">
                 <span className="font-bold">Stochastic Monte Carlo Passes (T)</span>
                 <span className="font-mono font-bold text-[#087f72] dark:text-[#5bd0a8]">T = {mcPasses} passes</span>
               </div>
@@ -149,14 +149,14 @@ export function UncertaintyLabPage({ activePatient, study }: UncertaintyLabPageP
                 onChange={(e) => setMcPasses(parseInt(e.target.value, 10))}
                 className="w-full accent-[#087f72]"
               />
-              <p className="mt-1.5 text-[11px] text-slate-400">
+              <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-300">
                 Keeps Spatial Dropout2d active at inference time while freezing BatchNorm running statistics to sample
                 from the approximate variational posterior q(θ | D).
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-3.5 dark:border-[#2b3a45]">
-              <div className="flex justify-between mb-1.5">
+            <div className="rounded-xl border border-slate-200 p-4 dark:border-[#293c4f]">
+              <div className="flex justify-between mb-2">
                 <span className="font-bold">Sigmoid Posterior Decision Threshold (τ)</span>
                 <span className="font-mono font-bold text-amber-500">τ = {threshold.toFixed(2)}</span>
               </div>
@@ -169,16 +169,16 @@ export function UncertaintyLabPage({ activePatient, study }: UncertaintyLabPageP
                 onChange={(e) => setThreshold(parseFloat(e.target.value))}
                 className="w-full accent-amber-500"
               />
-              <p className="mt-1.5 text-[11px] text-slate-400">
+              <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-300">
                 Lower τ increases sensitivity to infiltrative peritumoral FLAIR edema; higher τ restricts the mask to
                 the high-confidence solid tumor core.
               </p>
             </div>
           </div>
 
-          {/* Mathematical Decomposition Box */}
-          <div className="rounded-lg bg-slate-900 p-4 font-mono text-xs text-slate-200 space-y-2 border border-slate-800">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-[#5bd0a8]">
+          {/* Mathematical Decomposition Box (High-Contrast Dark Code Box) */}
+          <div className="dark-code-box space-y-2 text-xs">
+            <div className="code-kicker text-[11px] uppercase tracking-wider">
               Bayesian Uncertainty Decomposition (Kendall & Gal, NeurIPS)
             </div>
             <div>1. Posterior Mean: p̄ = (1/T) Σ_t sigmoid(f_θt(x))</div>

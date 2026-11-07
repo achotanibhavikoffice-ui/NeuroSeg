@@ -1,8 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-  Activity,
   ArrowUpRight,
-  Brain,
   ChevronDown,
   Command,
   FileText,
@@ -51,7 +49,12 @@ export function AppLayout({
   const [patientMenuOpen, setPatientMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  // Default to Light Mode (false)
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -69,9 +72,7 @@ export function AppLayout({
   }, []);
 
   const toggleTheme = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    document.documentElement.classList.toggle('dark', next);
+    setDarkMode((prev) => !prev);
   };
 
   const currentNavItem =
@@ -99,7 +100,7 @@ export function AppLayout({
           </button>
         </div>
 
-        {/* Active Study Switcher (Modeled after Syrus Tradeo Workspace Switcher) */}
+        {/* Active Study Switcher */}
         <div className="relative">
           <button
             type="button"
@@ -119,8 +120,8 @@ export function AppLayout({
           </button>
 
           {patientMenuOpen && (
-            <div className="absolute left-0 right-0 top-[62px] z-30 rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl dark:border-[#2b3a45] dark:bg-[#17232d]">
-              <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+            <div className="absolute left-0 right-0 top-[68px] z-30 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-[#293c4f] dark:bg-[#141f2b]">
+              <div className="px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-300">
                 Switch TCGA-LGG Study
               </div>
               {patients.map((pat) => (
@@ -131,15 +132,15 @@ export function AppLayout({
                     onSelectPatient(pat.patient_id);
                     setPatientMenuOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs transition ${
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-xs transition ${
                     pat.patient_id === activePatient.patient_id
-                      ? 'bg-[#e7f3ef] font-bold text-[#087f72] dark:bg-[#1d2b36] dark:text-[#5bd0a8]'
-                      : 'hover:bg-slate-100 dark:hover:bg-[#1d2b36]'
+                      ? 'bg-[#e6f4f1] font-bold text-[#087f72] dark:bg-[#1c2b3a] dark:text-[#5bd0a8]'
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-[#1c2b3a]'
                   }`}
                 >
                   <div>
                     <div className="font-bold">{pat.patient_id}</div>
-                    <div className="text-[11px] opacity-75">{pat.location}</div>
+                    <div className="text-[11px] opacity-80">{pat.location}</div>
                   </div>
                   <span className="font-mono text-[11px] font-bold">{pat.volume_cm3} cm³</span>
                 </button>
@@ -196,9 +197,9 @@ export function AppLayout({
             </div>
             <button
               type="button"
-              className="icon-button logout-button"
+              className="icon-button notification-button"
               onClick={toggleTheme}
-              title="Toggle Light / Dark Theme"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {darkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
@@ -213,7 +214,7 @@ export function AppLayout({
             <span>NeuroSeg v3.0</span>
             <span>/</span>
             <strong>{currentNavItem.label}</strong>
-            <span className="ml-3 hidden rounded bg-[#e7f3ef] px-2 py-0.5 font-mono text-[11px] font-bold text-[#087f72] dark:bg-[#1d2b36] dark:text-[#5bd0a8] sm:inline-block">
+            <span className="ml-3 hidden rounded-md bg-[#e6f4f1] px-2.5 py-1 font-mono text-[11.5px] font-bold text-[#087f72] dark:bg-[#1c2b3a] dark:text-[#5bd0a8] sm:inline-block">
               {activePatient.patient_id} • {activePatient.histology}
             </span>
           </div>
@@ -223,11 +224,11 @@ export function AppLayout({
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="hidden items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-500 transition hover:border-[#087f72] dark:border-[#2b3a45] dark:bg-[#1d2b36] dark:text-slate-300 md:flex"
+              className="hidden items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-[#087f72] dark:border-[#293c4f] dark:bg-[#1c2b3a] dark:text-slate-200 md:flex"
             >
               <Search size={13} />
               <span>Search patients, slices, labs...</span>
-              <kbd className="ml-2 flex items-center gap-0.5 rounded border border-slate-300 px-1 text-[10px] font-bold dark:border-slate-600">
+              <kbd className="ml-2 flex items-center gap-0.5 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:border-slate-600 dark:bg-[#141f2b] dark:text-slate-200">
                 <Command size={10} /> K
               </kbd>
             </button>
@@ -241,7 +242,7 @@ export function AppLayout({
               type="button"
               className="icon-button notification-button"
               onClick={toggleTheme}
-              title="Switch Theme"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {darkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>
@@ -267,10 +268,10 @@ export function AppLayout({
           onClick={() => setSearchOpen(false)}
         >
           <div
-            className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-[#2b3a45] dark:bg-[#17232d]"
+            className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-[#293c4f] dark:bg-[#141f2b]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 border-b border-slate-200 pb-3 dark:border-[#2b3a45]">
+            <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3.5 dark:border-[#293c4f]">
               <Search size={16} className="text-[#087f72]" />
               <input
                 type="text"
@@ -278,15 +279,19 @@ export function AppLayout({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Jump to TCGA patient ID, brain lobe, or research module..."
-                className="w-full bg-transparent text-sm outline-none"
+                className="w-full bg-transparent text-sm text-slate-800 outline-none dark:text-slate-100"
               />
-              <button type="button" onClick={() => setSearchOpen(false)} className="text-xs text-slate-400">
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                className="rounded border border-slate-200 px-2 py-0.5 text-xs font-bold text-slate-500 dark:border-slate-700 dark:text-slate-300"
+              >
                 ESC
               </button>
             </div>
 
-            <div className="mt-3 max-h-72 overflow-y-auto">
-              <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+            <div className="mt-3 max-h-80 overflow-y-auto space-y-1">
+              <div className="px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                 Workspaces
               </div>
               {navItems.map((item) => (
@@ -297,9 +302,9 @@ export function AppLayout({
                     navigate(item.path);
                     setSearchOpen(false);
                   }}
-                  className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs hover:bg-slate-100 dark:hover:bg-[#1d2b36]"
+                  className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-[#1c2b3a]"
                 >
-                  <span className="flex items-center gap-2 font-semibold">
+                  <span className="flex items-center gap-2.5 font-semibold">
                     <item.Icon size={14} className="text-[#087f72]" />
                     {item.label}
                   </span>
@@ -307,7 +312,7 @@ export function AppLayout({
                 </button>
               ))}
 
-              <div className="mt-2 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+              <div className="mt-3 px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                 TCGA-LGG Patient Cohort
               </div>
               {filteredPatients.map((pat) => (
@@ -319,11 +324,11 @@ export function AppLayout({
                     navigate('/workstation');
                     setSearchOpen(false);
                   }}
-                  className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs hover:bg-slate-100 dark:hover:bg-[#1d2b36]"
+                  className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-[#1c2b3a]"
                 >
                   <div>
                     <span className="font-bold text-[#087f72] dark:text-[#5bd0a8]">{pat.patient_id}</span>
-                    <span className="ml-2 opacity-75">{pat.histology}</span>
+                    <span className="ml-2 opacity-80">{pat.histology}</span>
                   </div>
                   <span className="font-mono text-[11px] font-bold">{pat.volume_cm3} cm³</span>
                 </button>
