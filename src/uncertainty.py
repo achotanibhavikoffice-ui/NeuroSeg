@@ -1,5 +1,5 @@
 """
-NeuroSeg v3.0: Bayesian Epistemic & Aleatoric Uncertainty Quantification Engine.
+NeuroSeg: Bayesian Epistemic & Aleatoric Uncertainty Quantification Engine.
 References:
   - Kendall & Gal, "What Uncertainties Do We Need in Bayesian Deep Learning for Computer Vision?" (NeurIPS)
   - Zou et al., "TBraTS: Trusted Brain Tumor Segmentation" (MICCAI)

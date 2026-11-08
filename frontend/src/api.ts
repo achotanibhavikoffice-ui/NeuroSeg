@@ -1304,8 +1304,8 @@ export const DEFAULT_ABLATION: AblationModelRow[] = [
     params_m: 31.74,
   },
   {
-    id: 'v5_neuroseg_v3_full',
-    name: '5. NeuroSeg v3.0 (Full Proposed)',
+    id: 'v5_neuroseg_full',
+    name: '5. NeuroSeg (Full Proposed)',
     backbone: 'Bi-Hemispheric TransUNet + Spectral AG + DeepSup',
     loss: 'Tri-Composite (Dice + Focal + Kervadec SDM Boundary)',
     dsc: 0.9184,
@@ -1795,7 +1795,7 @@ export const neuroApi = {
     } catch {
       const topDiff = hema.multimodal_fusion.differential_diagnosis[0];
       return {
-        source: 'NeuroSeg v3.0 Multimodal MRI + Hematology Engine',
+        source: 'NeuroSeg Multimodal MRI + Hematology Engine',
         report_markdown: `# MULTIDISCIPLINARY NEURO-ONCOLOGY & MRI CONSULTATION REPORT
 **Department of Diagnostic Neuro-Imaging & Molecular Neuro-Hematology**
 
@@ -1810,7 +1810,7 @@ export const neuroApi = {
 
 ---
 
-### 2. QUANTITATIVE 3D VOLUMETRIC & BOUNDARY METRICS (NeuroSeg v3.0)
+### 2. QUANTITATIVE 3D VOLUMETRIC & BOUNDARY METRICS (NeuroSeg)
 • **3D Segmented Tumor Volume:** ${volumetry.total_volume_cm3} cm³ (${volumetry.total_volume_mm3} mm³)
 • **RECIST 1.1 Longest Transaxial Diameter:** ${volumetry.recist_longest_diameter_mm} mm
 • **Equivalent Spherical Diameter:** ${volumetry.equivalent_spherical_diameter_mm} mm

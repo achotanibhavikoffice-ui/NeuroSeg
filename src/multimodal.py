@@ -1,5 +1,5 @@
 """
-NeuroSeg v3.0 — Cross-Modal MRI + Neuro-Hematology Gated Attention Fusion Network.
+NeuroSeg — Cross-Modal MRI + Neuro-Hematology Gated Attention Fusion Network.
 
 Fuses 3D Brain MRI Radiomic / Bottleneck Embeddings from AttentionUNet with a
 12-Biomarker Peripheral Blood & Liquid Biopsy Vector:
@@ -120,7 +120,7 @@ class CrossModalGatedFusionUnit(nn.Module):
 
 class CrossModalGatedFusionNet(nn.Module):
     """
-    Complete NeuroSeg v3.0 Multimodal MRI + Neuro-Hematology Network.
+    Complete NeuroSeg Multimodal MRI + Neuro-Hematology Network.
     Predicts:
       1. Non-invasive WHO CNS Grade probability (Grade 3/4 High-Grade vs Grade 2 Low-Grade)
       2. 4-Class Differential Diagnosis Posterior (Glioma vs Abscess vs PCNSL vs Demyelination)

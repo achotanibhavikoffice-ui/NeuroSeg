@@ -86,7 +86,7 @@ class RadiologyReportGenerator:
             hematology_data=hematology_data,
         )
         return {
-            "source": "NeuroSeg v3.0 Multimodal MRI + Hematology Engine",
+            "source": "NeuroSeg Multimodal MRI + Hematology Engine",
             "status": "success",
             "report_markdown": report_text,
         }
@@ -189,7 +189,7 @@ Generate the complete, formal consultation report."""
 * **Age / Sex:** {patient_age} Y / {patient_gender.upper()}
 * **Examination:** 3.0T Brain MRI Volumetric FLAIR + Peripheral Blood Liquid Biopsy Fusion
 * **Clinical Indication:** {indication}
-* **Analysis Pipeline:** NeuroSeg v3.0 Bi-Hemispheric Spectral-TransUNet + Cross-Modal Gated Hematology Net
+* **Analysis Pipeline:** NeuroSeg Bi-Hemispheric Spectral-TransUNet + Cross-Modal Gated Hematology Net
 
 ---
 
@@ -217,5 +217,5 @@ Generate the complete, formal consultation report."""
 1. **Intra-axial T2/FLAIR hyperintense mass ({volume_cm3:.2f} cm³, RECIST diameter {recist_mm:.1f} mm) integrated with peripheral blood liquid biopsy biomarkers.**
 2. **Neurosurgical & Medical Oncology Action Plan:** Correlate pre-craniotomy hemostatic clearance (Platelets ≥100×10³/µL, INR ≤1.25) and CTCAE v5.0 Temozolomide dosing thresholds prior to cytoreductive intervention or alkylating chemotherapy cycle initiation.
 
-*Report electronically validated by NeuroSeg v3.0 Autonomous Multimodal Diagnostic Engine*
+*Report electronically validated by NeuroSeg Autonomous Multimodal Diagnostic Engine*
 """

@@ -187,7 +187,7 @@ export function AppLayout({
           <div className="promo-icon">
             <Sparkles size={15} />
           </div>
-          <strong>NeuroSeg v3.0 Architecture</strong>
+          <strong>NeuroSeg Architecture</strong>
           <p>
             Bi-Hemispheric Cross-Attention + Spectral FFT Gates + Kervadec SDM Boundary Loss (DSC: 0.9184).
           </p>
@@ -220,7 +220,7 @@ export function AppLayout({
       <div className="main-area">
         <header className="topbar">
           <div className="breadcrumb">
-            <span>NeuroSeg v3.0</span>
+            <span>NeuroSeg</span>
             <span>/</span>
             <strong>{currentNavItem.label}</strong>
             <span className="ml-3 hidden rounded-md bg-[#e6f4f1] px-2.5 py-1 font-mono text-[11.5px] font-bold text-[#087f72] dark:bg-[#1c2b3a] dark:text-[#5bd0a8] sm:inline-block">
