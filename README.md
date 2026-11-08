@@ -6,6 +6,7 @@
     <img src="https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
     <img src="https://img.shields.io/badge/Deep%20Learning-PyTorch%202.x-ee4c2c?logo=pytorch&logoColor=white" alt="PyTorch">
     <img src="https://img.shields.io/badge/Cohort-TCGA--LGG%20%7C%2012%2C000%20Samples-087f72" alt="TCGA-LGG Multimodal Cohort">
+    <a href="https://doi.org/10.5281/zenodo.24046115"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.24046115.svg" alt="DOI: 10.5281/zenodo.24046115"></a>
     <a href="NeuroSeg_IEEE_Research_Paper.pdf"><img src="https://img.shields.io/badge/Paper-IEEE%20Two--Column%20PDF-b31b1b?logo=adobeacrobatreader&logoColor=white" alt="IEEE Research Paper"></a>
     <a href="#-project-status-research-paper-and-license"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License"></a>
     <a href="#-project-status-research-paper-and-license"><img src="https://img.shields.io/badge/status-active%20development-blue" alt="Active development"></a>
@@ -366,8 +367,25 @@ Issues and pull requests are welcome:
 
 NeuroSeg is an academic research and clinical software-engineering workspace developed by **Bhavik Achotani** (*Department of Information Technology, Thadomal Shahani Engineering College, University of Mumbai*).
 
+- **Permanent Digital Object Identifier (DOI):** [https://doi.org/10.5281/zenodo.24046115](https://doi.org/10.5281/zenodo.24046115)
 - **Full IEEE Research Paper (14-page two-column PDF):** [NeuroSeg_IEEE_Research_Paper.pdf](NeuroSeg_IEEE_Research_Paper.pdf)
 - **LaTeX Source:** [paper/NeuroSeg_IEEE_Paper.tex](paper/NeuroSeg_IEEE_Paper.tex)
+
+### Citation
+
+If you use NeuroSeg in your research, please cite the permanent DOI:
+
+```bibtex
+@article{achotani2026neuroseg,
+  author    = {Achotani, Bhavik},
+  title     = {NeuroSeg: A Bi-Hemispheric Spectral-Attention U-Net Workspace with Signed Distance Boundary Supervision, Bayesian Uncertainty Calibration, and Cross-Modal Neuro-Hematology Fusion},
+  journal   = {Zenodo Preprint},
+  year      = {2026},
+  doi       = {10.5281/zenodo.24046115},
+  url       = {https://doi.org/10.5281/zenodo.24046115},
+  publisher = {Zenodo}
+}
+```
 
 This project is released under the **MIT License**.
 
