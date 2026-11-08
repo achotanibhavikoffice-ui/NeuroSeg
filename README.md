@@ -1,10 +1,10 @@
-# NeuroSeg v3.0: Bi-Hemispheric Spectral-Transformer Attention U-Net with Bayesian Uncertainty & Signed Distance Boundary Loss
+# NeuroSeg: Bi-Hemispheric Spectral-Transformer Attention U-Net with Bayesian Uncertainty & Signed Distance Boundary Loss
 
-**NeuroSeg v3.0** is an end-to-end clinical neuro-oncology segmentation, Bayesian uncertainty calibration, and interactive PACS platform built in **PyTorch**, **FastAPI**, and **React 18 + TypeScript + Vite**.
+**NeuroSeg** is an end-to-end clinical neuro-oncology segmentation, Bayesian uncertainty calibration, and interactive PACS platform built in **PyTorch**, **FastAPI**, and **React 18 + TypeScript + Vite**.
 
 ---
 
-## 5 Frontier Research Upgrades Implemented in NeuroSeg v3.0
+## 5 Frontier Research Upgrades Implemented in NeuroSeg
 
 1. **Upgrade 1 — Signed Distance Map (SDM) Surface / Boundary Loss (`src/losses.py`):**
    * *Reference:* Kervadec et al., *Medical Image Analysis (MedIA)*, 2021.
@@ -38,7 +38,7 @@
 | **2. Vanilla U-Net + Dice-Focal** | 4-Stage Conv U-Net | Composite Dice-Focal | 0.8645 | 0.7810 | 6.42 mm | 0.0490 | 11.2 ms |
 | **3. Attention U-Net (Oktay)** | Additive Soft Attention Gates | Composite Dice-Focal | 0.8942 | 0.8218 | 4.85 mm | 0.0340 | 12.1 ms |
 | **4. + Spectral FFT & DeepSup** | 2D Fourier AG + 4-Scale DeepSup | DeepSup Dice-Focal | 0.9076 | 0.8394 | 3.98 mm | 0.0250 | 12.6 ms |
-| **5. NeuroSeg v3.0 (Full Proposed)** | **Bi-Hemispheric TransUNet + Spectral AG** | **Tri-Composite (Dice + Focal + SDM)** | **0.9184** | **0.8512** | **3.42 mm** | **0.0192** | **13.4 ms** |
+| **5. NeuroSeg (Full Proposed)** | **Bi-Hemispheric TransUNet + Spectral AG** | **Tri-Composite (Dice + Focal + SDM)** | **0.9184** | **0.8512** | **3.42 mm** | **0.0192** | **13.4 ms** |
 
 ---
 
@@ -68,7 +68,9 @@ neuroseg/
 │           ├── CohortPage.tsx            # Multi-Institutional TCGA-LGG Study Browser (IDH1/1p19q/MGMT)
 │           └── ReportsPage.tsx           # Autonomous Groq LLaMA 3.3 ACR/RSNA Consultation Report Studio
 └── paper/
-    └── NeuroSeg_Paper.tex    # IEEE Conference / SSRN LaTeX Research Manuscript
+    ├── NeuroSeg_IEEE_Paper.tex   # 14-Page IEEE Two-Column Research Manuscript
+    ├── NeuroSeg_IEEE_Paper.pdf   # Compiled IEEE Two-Column Research Paper PDF
+    └── NeuroSeg_Paper.tex        # Concise IEEE Conference Summary Manuscript
 ```
 
 ---

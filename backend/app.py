@@ -1,5 +1,5 @@
 """
-NeuroSeg v3.0 Clinical FastAPI Production Server.
+NeuroSeg Clinical FastAPI Production Server.
 Exposes endpoints for:
   - Multi-slice axial MRI segmentation with Spectral-Transformer Attention U-Net
   - Real-time Grad-CAM++, Spectral Attention (α), Bi-Hemispheric Asymmetry, & Bayesian Epistemic Uncertainty Halo
@@ -43,9 +43,9 @@ from src.model import AttentionUNet, count_parameters
 from src.uncertainty import estimate_voxel_uncertainty
 
 app = FastAPI(
-    title="NeuroSeg v3.0 Clinical Neuro-Oncology PACS API",
+    title="NeuroSeg Clinical Neuro-Oncology PACS API",
     description="Bi-Hemispheric Spectral-Transformer Attention U-Net with Bayesian Uncertainty & SDM Boundary Loss",
-    version="3.0.0",
+    version="1.0.0",
 )
 
 app.add_middleware(
@@ -457,7 +457,7 @@ def get_model() -> AttentionUNet:
             deep_supervision=False,
         )
         ckpt_path = os.path.join(
-            os.path.dirname(__file__), "..", "outputs", "5_neuroseg_v3_full_bihemispheric_sdm_best.pt"
+            os.path.dirname(__file__), "..", "outputs", "5_neuroseg_full_bihemispheric_sdm_best.pt"
         )
         if os.path.exists(ckpt_path):
             MODEL.load_state_dict(torch.load(ckpt_path, map_location=DEVICE), strict=False)
@@ -490,12 +490,12 @@ def array_to_base64_png(arr: np.ndarray, colormap: Optional[str] = None) -> str:
 def get_engine_status():
     model = get_model()
     return {
-        "service": "NeuroSeg v3.0 Clinical AI Platform",
+        "service": "NeuroSeg Clinical AI Platform",
         "status": "operational",
         "connected": True,
         "mode": "FP16_AMP_ACTIVE",
         "device": str(DEVICE),
-        "version": "3.0.0",
+        "version": "1.0.0",
         "architecture": "Bi-Hemispheric Spectral-TransUNet + Deep Supervision",
         "trainable_parameters": count_parameters(model),
         "latency_ms": 13.4,
@@ -760,8 +760,8 @@ def get_ablation_benchmarks():
                 "params_m": 31.74,
             },
             {
-                "id": "v5_neuroseg_v3_full",
-                "name": "5. NeuroSeg v3.0 (Full Proposed)",
+                "id": "v5_neuroseg_full",
+                "name": "5. NeuroSeg (Full Proposed)",
                 "backbone": "Bi-Hemispheric TransUNet + Spectral AG + DeepSup",
                 "loss": "Tri-Composite (Dice + Focal + Kervadec SDM Boundary)",
                 "dsc": 0.9184,

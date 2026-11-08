@@ -1,5 +1,5 @@
 """
-NeuroSeg v3.0: Hybrid Spectral-Transformer Attention U-Net with:
+NeuroSeg: Hybrid Spectral-Transformer Attention U-Net with:
   - Upgrade 3: Multi-Scale Deep Supervision (nnU-Net paradigm, Isensee et al., Nature Methods)
   - Upgrade 4: Contralateral Bi-Hemispheric Symmetry Cross-Attention & Transformer Bottleneck (TransUNet/Swin-UNETR)
   - Upgrade 5: Frequency-Domain 2D Fast Fourier (FFT) High-Pass Spectral Attention Gates
@@ -183,7 +183,7 @@ class UpBlock(nn.Module):
 
 class AttentionUNet(nn.Module):
     """
-    NeuroSeg v3.0: 4-Stage Spectral-Transformer Attention U-Net with:
+    NeuroSeg: 4-Stage Spectral-Transformer Attention U-Net with:
       - Residual ConvBlocks with Spatial Monte Carlo Dropout (for Bayesian Uncertainty)
       - Spectral FFT High-Pass Attention Gates at all 4 skip connections
       - Bi-Hemispheric Contralateral Cross-Attention Bottleneck

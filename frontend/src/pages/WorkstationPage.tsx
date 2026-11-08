@@ -173,7 +173,7 @@ export function WorkstationPage({
         <div>
           <div className="eyebrow">
             <span className="status-dot" />
-            <span>INTERACTIVE PACS DIAGNOSTIC WORKSTATION v3.0</span>
+            <span>INTERACTIVE PACS DIAGNOSTIC WORKSTATION</span>
             <span className="eyebrow-divider">•</span>
             <span>{customResult ? `CUSTOM SCAN: ${customResult.filename}` : activePatient.patient_id}</span>
             <span className="eyebrow-divider">•</span>
@@ -537,7 +537,7 @@ export function WorkstationPage({
             <label className="flex items-center justify-between rounded-md border border-slate-200 p-2.5 cursor-pointer dark:border-[#2b3a45]">
               <span className="flex items-center gap-2 font-semibold">
                 <span className="h-3 w-3 rounded-full bg-red-500" />
-                NeuroSeg v3.0 Mask
+                NeuroSeg Mask
               </span>
               <input
                 type="checkbox"

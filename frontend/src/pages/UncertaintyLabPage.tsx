@@ -223,7 +223,7 @@ export function UncertaintyLabPage({ activePatient, study }: UncertaintyLabPageP
             <div>
               <span className="section-kicker">PROBABILITY CALIBRATION & RELIABILITY CURVE</span>
               <h2 className="text-base font-bold">
-                Expected Calibration Error (ECE): Vanilla U-Net (0.0680) vs. NeuroSeg v3.0 ({simulatedEce})
+                Expected Calibration Error (ECE): Vanilla U-Net (0.0680) vs. NeuroSeg ({simulatedEce})
               </h2>
             </div>
             <span className="change-pill change-up">
@@ -245,10 +245,10 @@ export function UncertaintyLabPage({ activePatient, study }: UncertaintyLabPageP
                     title={`Vanilla U-Net Empirical Accuracy: ${(b.unetAcc * 100).toFixed(1)}% (Expected: ${(b.expected * 100).toFixed(1)}%)`}
                     className="w-3 rounded-t opacity-80"
                   />
-                  {/* NeuroSeg v3.0 (Closely tracks diagonal ideal calibration) */}
+                  {/* NeuroSeg (Closely tracks diagonal ideal calibration) */}
                   <div
                     style={{ height: `${Math.round(b.neurosegAcc * 135)}px`, backgroundColor: '#087f72' }}
-                    title={`NeuroSeg v3.0 Empirical Accuracy: ${(b.neurosegAcc * 100).toFixed(1)}% (Expected: ${(b.expected * 100).toFixed(1)}%)`}
+                    title={`NeuroSeg Empirical Accuracy: ${(b.neurosegAcc * 100).toFixed(1)}% (Expected: ${(b.expected * 100).toFixed(1)}%)`}
                     className="w-3 rounded-t"
                   />
                 </div>
@@ -263,7 +263,7 @@ export function UncertaintyLabPage({ activePatient, study }: UncertaintyLabPageP
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-sm bg-[#087f72] dark:bg-[#5bd0a8]" />
-                <strong>NeuroSeg v3.0 (MC-Dropout + SDM Loss)</strong>
+                <strong>NeuroSeg (MC-Dropout + SDM Loss)</strong>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" />
@@ -281,7 +281,7 @@ export function UncertaintyLabPage({ activePatient, study }: UncertaintyLabPageP
                   <th className="py-2">Confidence Bin</th>
                   <th className="py-2">Ideal Calibrated</th>
                   <th className="py-2">Vanilla U-Net Acc</th>
-                  <th className="py-2">NeuroSeg v3.0 Acc</th>
+                  <th className="py-2">NeuroSeg Acc</th>
                   <th className="py-2 text-right">Calibration Gap |Conf - Acc|</th>
                 </tr>
               </thead>

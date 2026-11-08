@@ -10,7 +10,7 @@
 
 \begin{document}
 
-\title{NeuroSeg v3.0: Bi-Hemispheric Spectral-Transformer Attention U-Net with Bayesian Uncertainty and Signed Distance Boundary Loss for Volumetric Glioma Segmentation}
+\title{NeuroSeg: Bi-Hemispheric Spectral-Transformer Attention U-Net with Bayesian Uncertainty and Signed Distance Boundary Loss for Volumetric Glioma Segmentation}
 
 \author{\IEEEauthorblockN{Bhavik Achotani}
 \IEEEauthorblockA{\textit{Department of Information Technology} \\
@@ -22,7 +22,7 @@ achotanibhavikoffice@gmail.com}
 \maketitle
 
 \begin{abstract}
-Automated semantic segmentation of Lower-Grade Gliomas (LGG) from multi-sequence Magnetic Resonance Imaging (MRI) is critical for stereotactic surgical resection, radiotherapy margin planning, and longitudinal RANO response tracking. However, clinical adoption remains hindered by three fundamental barriers: (1) local convolutional receptive fields that fail to model contralateral brain hemisphere symmetry, (2) severe foreground-background voxel imbalance ($<2\%$ tumor volume) combined with blurry infiltrative margins, and (3) uncalibrated, overconfident softmax/sigmoid predictions near eloquent cortex. In this work, we present \textbf{NeuroSeg v3.0}, a deep neuro-oncology segmentation and clinical PACS framework incorporating five synergistic architectural and mathematical innovations: (i) a \textbf{Contralateral Bi-Hemispheric Cross-Attention Transformer Bottleneck} that explicitly models sagittal midline asymmetry, (ii) \textbf{2D Fast Fourier Transform (FFT) High-Pass Spectral Attention Gates} that isolate high-frequency infiltrative glioma edges from low-frequency MRI intensity bias fields, (iii) \textbf{Multi-Scale Deep Supervision} across four decoder resolutions, (iv) a \textbf{Tri-Composite Signed Distance Map (SDM) Surface Boundary Loss} coupled with Dice-Focal optimization, and (v) \textbf{Bayesian Monte Carlo Spatial Dropout Uncertainty Quantification} paired with Dense Segmentation Grad-CAM++. Evaluated across 3,929 FLAIR MRI scans from 110 patients in the TCGA-LGG cohort, NeuroSeg v3.0 achieves a Dice Similarity Coefficient (DSC) of \textbf{0.9184}, an IoU of \textbf{0.8512}, a 95th Percentile Hausdorff Distance ($\text{HD}_{95}$) of \textbf{3.42 mm}, and an Expected Calibration Error (ECE) of \textbf{0.0192} at 13.4 ms per slice under FP16 mixed-precision execution.
+Automated semantic segmentation of Lower-Grade Gliomas (LGG) from multi-sequence Magnetic Resonance Imaging (MRI) is critical for stereotactic surgical resection, radiotherapy margin planning, and longitudinal RANO response tracking. However, clinical adoption remains hindered by three fundamental barriers: (1) local convolutional receptive fields that fail to model contralateral brain hemisphere symmetry, (2) severe foreground-background voxel imbalance ($<2\%$ tumor volume) combined with blurry infiltrative margins, and (3) uncalibrated, overconfident softmax/sigmoid predictions near eloquent cortex. In this work, we present \textbf{NeuroSeg}, a deep neuro-oncology segmentation and clinical PACS framework incorporating five synergistic architectural and mathematical innovations: (i) a \textbf{Contralateral Bi-Hemispheric Cross-Attention Transformer Bottleneck} that explicitly models sagittal midline asymmetry, (ii) \textbf{2D Fast Fourier Transform (FFT) High-Pass Spectral Attention Gates} that isolate high-frequency infiltrative glioma edges from low-frequency MRI intensity bias fields, (iii) \textbf{Multi-Scale Deep Supervision} across four decoder resolutions, (iv) a \textbf{Tri-Composite Signed Distance Map (SDM) Surface Boundary Loss} coupled with Dice-Focal optimization, and (v) \textbf{Bayesian Monte Carlo Spatial Dropout Uncertainty Quantification} paired with Dense Segmentation Grad-CAM++. Evaluated across 3,929 FLAIR MRI scans from 110 patients in the TCGA-LGG cohort, NeuroSeg achieves a Dice Similarity Coefficient (DSC) of \textbf{0.9184}, an IoU of \textbf{0.8512}, a 95th Percentile Hausdorff Distance ($\text{HD}_{95}$) of \textbf{3.42 mm}, and an Expected Calibration Error (ECE) of \textbf{0.0192} at 13.4 ms per slice under FP16 mixed-precision execution.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -86,14 +86,14 @@ Performing $T=8$ stochastic forward passes with spatial Monte Carlo dropout acti
 2. Vanilla U-Net (Dice-Focal) & 0.8645 & 0.7810 & 6.42 & 0.0490 \\
 3. Attention U-Net (AG) & 0.8942 & 0.8218 & 4.85 & 0.0340 \\
 4. + Spectral FFT \& DeepSup & 0.9076 & 0.8394 & 3.98 & 0.0250 \\
-\textbf{5. NeuroSeg v3.0 (Full)} & \textbf{0.9184} & \textbf{0.8512} & \textbf{3.42} & \textbf{0.0192} \\
+\textbf{5. NeuroSeg (Full)} & \textbf{0.9184} & \textbf{0.8512} & \textbf{3.42} & \textbf{0.0192} \\
 \bottomrule
 \end{tabular}
 \label{tab:ablation}
 \end{table}
 
 \section{Conclusion}
-NeuroSeg v3.0 establishes that uniting contralateral bi-hemispheric cross-attention, spectral Fourier skip gating, signed distance boundary supervision, and Bayesian uncertainty estimation produces highly accurate, well-calibrated volumetric glioma segmentations ready for clinical PACS deployment.
+NeuroSeg establishes that uniting contralateral bi-hemispheric cross-attention, spectral Fourier skip gating, signed distance boundary supervision, and Bayesian uncertainty estimation produces highly accurate, well-calibrated volumetric glioma segmentations ready for clinical PACS deployment.
 
 \begin{thebibliography}{00}
 \bibitem{b1} O. Oktay et al., ``Attention U-Net: Learning where to look for the pancreas,'' \textit{MIDL}, 2018.

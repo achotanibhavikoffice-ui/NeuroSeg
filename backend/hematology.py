@@ -1,5 +1,5 @@
 """
-NeuroSeg v3.0 — Neuro-Hematology, Liquid Biopsy & Pre-Craniotomy / TMZ Toxicity Engine.
+NeuroSeg — Neuro-Hematology, Liquid Biopsy & Pre-Craniotomy / TMZ Toxicity Engine.
 
 Integrates peripheral blood panel biomarkers with 3D Brain MRI volumetric features:
   1. Systemic Immune-Inflammation Indices:

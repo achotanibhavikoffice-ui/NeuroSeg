@@ -50,7 +50,7 @@ const UPGRADE_CARDS = [
 ];
 
 export function AblationLabPage({ ablation }: AblationLabPageProps) {
-  const [selectedId, setSelectedId] = useState(ablation[ablation.length - 1]?.id || 'v5_neuroseg_v3_full');
+  const [selectedId, setSelectedId] = useState(ablation[ablation.length - 1]?.id || 'v5_neuroseg_full');
   const selectedModel = ablation.find((m) => m.id === selectedId) || ablation[ablation.length - 1];
 
   return (
@@ -66,7 +66,7 @@ export function AblationLabPage({ ablation }: AblationLabPageProps) {
           <h1>5-Way Progressive Ablation Study & Research Formulations</h1>
           <p>
             Systematic evaluation quantifying the exact contribution of each architectural and loss upgrade from
-            Vanilla U-Net (0.8310 DSC) to NeuroSeg v3.0 Full (0.9184 DSC).
+            Vanilla U-Net (0.8310 DSC) to NeuroSeg Full (0.9184 DSC).
           </p>
         </div>
       </div>

@@ -42,7 +42,7 @@ export function ReportsPage({
   );
   const [reportText, setReportText] = useState('');
   const [source, setSource] = useState(
-    'NeuroSeg v3.0 Multimodal MRI + Hematology Engine'
+    'NeuroSeg Multimodal MRI + Hematology Engine'
   );
   const [loadingReport, setLoadingReport] = useState(false);
   const [copied, setCopied] = useState(false);

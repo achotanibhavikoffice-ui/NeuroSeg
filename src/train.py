@@ -1,5 +1,5 @@
 """
-NeuroSeg v3.0 — Large-Scale 12,000-Sample Dataset Generator & End-to-End PyTorch Training Pipeline.
+NeuroSeg — Large-Scale 12,000-Sample Dataset Generator & End-to-End PyTorch Training Pipeline.
 
 1. Generates 12,000 Multimodal Brain MRI + Neuro-Hematology Clinical Samples across
    300 Multi-Institutional TCGA-LGG / BraTS Patients:
@@ -13,7 +13,7 @@ NeuroSeg v3.0 — Large-Scale 12,000-Sample Dataset Generator & End-to-End PyTor
      - CrossModalGatedFusionNet (PyTorch MRI + 12-Biomarker Blood Gated Network) on all
        9,000 training samples and evaluates on 1,500 validation & 1,500 test samples.
      - AttentionUNet (Bi-Hemispheric Spectral-TransUNet with Kervadec SDM Boundary Loss)
-       and saves trained checkpoint to outputs/5_neuroseg_v3_full_bihemispheric_sdm_best.pt.
+       and saves trained checkpoint to outputs/5_neuroseg_full_bihemispheric_sdm_best.pt.
 3. Exports:
      - outputs/training_telemetry.json (epoch-by-epoch train/val/test metrics, confusion
        matrix, ROC-AUC, DSC, IoU, HD95, and ECE).
@@ -316,7 +316,7 @@ def train_and_evaluate() -> Dict[str, Any]:
     os.makedirs(outputs_dir, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"[NeuroSeg v3.0 Trainer] Device: {device}")
+    print(f"[NeuroSeg Trainer] Device: {device}")
 
     # 1. Generate 12,000 Multimodal Training, Validation & Testing Samples
     t0 = time.time()
@@ -429,7 +429,7 @@ def train_and_evaluate() -> Dict[str, Any]:
             best_val_acc = val_diff_acc
             torch.save(
                 fusion_model.state_dict(),
-                os.path.join(outputs_dir, "multimodal_fusion_v3_best.pt"),
+                os.path.join(outputs_dir, "multimodal_fusion_best.pt"),
             )
 
     # Evaluate on 1,500 Held-Out Test Samples
@@ -479,7 +479,7 @@ def train_and_evaluate() -> Dict[str, Any]:
             loss.backward()
             seg_opt.step()
 
-    ckpt_path = os.path.join(outputs_dir, "5_neuroseg_v3_full_bihemispheric_sdm_best.pt")
+    ckpt_path = os.path.join(outputs_dir, "5_neuroseg_full_bihemispheric_sdm_best.pt")
     torch.save(seg_model.state_dict(), ckpt_path)
     print(f"[Segmentation Checkpoint] Saved trained AttentionUNet weights to {ckpt_path}")
 

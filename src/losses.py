@@ -1,5 +1,5 @@
 """
-NeuroSeg v3.0: Advanced Loss Formulations & Clinical Evaluation Metrics.
+NeuroSeg: Advanced Loss Formulations & Clinical Evaluation Metrics.
 Implements:
   - Soft Dice Loss
   - Binary Focal Loss (Lin et al., ICCV)
@@ -109,7 +109,7 @@ class SignedDistanceBoundaryLoss(nn.Module):
 
 class DiceFocalLoss(nn.Module):
     """
-    Tri-Composite Boundary-Aware Loss (NeuroSeg v3.0):
+    Tri-Composite Boundary-Aware Loss (NeuroSeg):
         L = w_dice * L_Dice + w_focal * L_Focal + w_boundary * L_SDM_Boundary
     """
 

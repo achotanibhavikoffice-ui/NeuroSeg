@@ -1,11 +1,11 @@
 """
-NeuroSeg v3.0: Training & 5-Way Architectural Ablation Pipeline.
+NeuroSeg: Training & 5-Way Architectural Ablation Pipeline.
 Evaluates:
   1. Vanilla U-Net (BCE Loss)
   2. Vanilla U-Net (Dice-Focal Loss)
   3. Attention U-Net (Dice-Focal Loss)
   4. Attention U-Net + Multi-Scale Deep Supervision + Spectral FFT Gates
-  5. NeuroSeg v3.0 Full (Bi-Hemispheric Transformer + Spectral Gates + Deep Supervision + SDM Boundary Loss)
+  5. NeuroSeg Full (Bi-Hemispheric Transformer + Spectral Gates + Deep Supervision + SDM Boundary Loss)
 """
 
 import argparse
@@ -184,7 +184,7 @@ def run_experiment(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="NeuroSeg v3.0: Spectral-Transformer Attention U-Net")
+    parser = argparse.ArgumentParser(description="NeuroSeg: Spectral-Transformer Attention U-Net")
     parser.add_argument("--data-dir", type=str, default=None, help="Path to TCGA-LGG dataset folder")
     parser.add_argument("--image-size", type=int, default=256, help="Input MRI slice resolution")
     parser.add_argument("--batch-size", type=int, default=16, help="Mini-batch size")
@@ -207,11 +207,11 @@ def main():
             ("2_Vanilla_UNet_DiceFocal", False, False, False, False, DiceFocalLoss(0.6, 0.4, 0.0)),
             ("3_Attention_UNet_DiceFocal", True, False, False, False, DiceFocalLoss(0.6, 0.4, 0.0)),
             ("4_Spectral_Attention_UNet_DeepSup", True, True, False, True, DiceFocalLoss(0.55, 0.35, 0.10)),
-            ("5_NeuroSeg_v3_Full_BiHemispheric_SDM", True, True, True, True, DiceFocalLoss(0.50, 0.30, 0.20)),
+            ("5_NeuroSeg_Full_BiHemispheric_SDM", True, True, True, True, DiceFocalLoss(0.50, 0.30, 0.20)),
         ]
     else:
         configs = [
-            ("NeuroSeg_v3_Full_BiHemispheric_SDM", True, True, True, True, DiceFocalLoss(0.50, 0.30, 0.20)),
+            ("NeuroSeg_Full_BiHemispheric_SDM", True, True, True, True, DiceFocalLoss(0.50, 0.30, 0.20)),
         ]
 
     results = {}
