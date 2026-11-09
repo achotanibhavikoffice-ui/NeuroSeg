@@ -6,6 +6,7 @@
     <img src="https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
     <img src="https://img.shields.io/badge/Deep%20Learning-PyTorch%202.x-ee4c2c?logo=pytorch&logoColor=white" alt="PyTorch">
     <img src="https://img.shields.io/badge/Cohort-TCGA--LGG%20%7C%2012%2C000%20Samples-087f72" alt="TCGA-LGG Multimodal Cohort">
+    <a href="https://huggingface.co/spaces/achotanibhavikoffice-ui/neuroseg-demo"><img src="https://img.shields.io/badge/Live%20Demo-Hugging%20Face%20Spaces-FFD21E?logo=huggingface&logoColor=black" alt="Live Demo on Hugging Face"></a>
     <a href="https://doi.org/10.5281/zenodo.24046115"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.24046115.svg" alt="DOI: 10.5281/zenodo.24046115"></a>
     <a href="https://orcid.org/0009-0006-3098-6175"><img src="https://img.shields.io/badge/ORCID-0009--0006--3098--6175-A6CE39?logo=orcid&logoColor=white" alt="ORCID: 0009-0006-3098-6175"></a>
     <a href="NeuroSeg_IEEE_Research_Paper.pdf"><img src="https://img.shields.io/badge/Paper-IEEE%20Two--Column%20PDF-b31b1b?logo=adobeacrobatreader&logoColor=white" alt="IEEE Research Paper"></a>
